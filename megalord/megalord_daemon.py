@@ -325,6 +325,7 @@ class MegalordDaemon:
 
             cycle_results["approved"] += 1
             live_ticket = None
+            live_res = None  # Shadow mode has no broker execution result.
 
             # If MT5 Live Mode is active, send real order to The 5%ers broker
             if self.mode == "mt5_live":
@@ -437,7 +438,10 @@ class MegalordDaemon:
             self._dispatch_alert(candidate, decision, allocated_risk_r, ticket=live_ticket, twin_info=live_res)
 
         # Position Lifecycle Management: Check open positions for TP1, TP2, SL, BE exits
-        import MetaTrader5 as mt5
+        # MetaTrader5 is required only for live lifecycle management; shadow-mode tests
+        # and simulations must not depend on the Windows-only terminal package.
+        if self.mode == "mt5_live":
+            import MetaTrader5 as mt5
         active_open_positions = []
         for pos in open_positions:
             is_closed = False
