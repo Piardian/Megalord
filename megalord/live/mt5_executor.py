@@ -217,6 +217,30 @@ class MegalordMT5Executor:
             return None, None
         return sym_info, tick
 
+    def get_market_quality_context(self, symbol: str, direction: str) -> Optional[Dict[str, float]]:
+        """Return a fresh broker quote for pre-trade spread and entry-drift checks."""
+        if not self.ensure_connected():
+            return None
+        sym_info, tick = self._prepare_symbol_and_tick(symbol)
+        if not sym_info or not tick:
+            return None
+        side = str(direction).upper()
+        if side not in ("LONG", "BUY", "SHORT", "SELL"):
+            return None
+        bid, ask = float(tick.bid), float(tick.ask)
+        spread = ask - bid
+        point = getattr(sym_info, "point", None)
+        if not math.isfinite(spread) or spread < 0 or not self._valid_price(point):
+            logger.error("Invalid live spread/point for %s.", symbol)
+            return None
+        executable_price = ask if side in ("LONG", "BUY") else bid
+        return {
+            "current_price": executable_price,
+            "spread_price": spread,
+            "spread_points": spread / float(point),
+            "point": float(point),
+        }
+
     def _check_margin(self, symbol: str, order_type: int, volume: float, price: float) -> bool:
         acc = mt5.account_info()
         if not acc:
