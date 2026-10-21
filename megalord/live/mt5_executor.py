@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import math
+import time
 from decimal import Decimal
 from typing import Dict, Any, Optional
 
@@ -405,33 +406,164 @@ class MegalordMT5Executor:
             "total_lot": leg1_lot + leg2_lot, "is_split": True,
         }
 
+    def _find_filled_position(self, ticket: int, symbol: str, volume: float, order_type: int):
+        """Find the filled position without guessing across unrelated positions."""
+        positions = mt5.positions_get(ticket=int(ticket))
+        if positions:
+            return positions[0]
+        positions = mt5.positions_get(symbol=symbol)
+        if not positions:
+            return None
+        expected_type = mt5.POSITION_TYPE_BUY if order_type == mt5.ORDER_TYPE_BUY else mt5.POSITION_TYPE_SELL
+        sym_info = mt5.symbol_info(symbol)
+        step = float(getattr(sym_info, "volume_step", 0.0) or 0.0) if sym_info else 0.0
+        tolerance = max(1e-8, step / 2.0)
+        candidates = []
+        for pos in positions:
+            try:
+                if int(getattr(pos, "magic", -1)) != self.magic:
+                    continue
+                if int(getattr(pos, "type", -1)) != int(expected_type):
+                    continue
+                if abs(float(getattr(pos, "volume", 0.0)) - float(volume)) > tolerance:
+                    continue
+                candidates.append(pos)
+            except (TypeError, ValueError):
+                continue
+        return candidates[0] if len(candidates) == 1 else None
+
+    def _verify_or_restore_stop_loss(self, ticket: int, symbol: str, volume: float, order_type: int, expected_sl: float) -> bool:
+        """Verify broker-side SL after fill; repair it or attempt a position-specific emergency close."""
+        expected_sl = float(expected_sl)
+        sym_info = mt5.symbol_info(symbol)
+        point = float(getattr(sym_info, "point", 0.0) or 0.0) if sym_info else 0.0
+        tolerance = max(point * 0.5, 1e-8)
+        position = None
+        for _ in range(5):
+            position = self._find_filled_position(ticket, symbol, volume, order_type)
+            if position is not None:
+                break
+            time.sleep(0.2)
+
+        if position is None:
+            logger.critical(
+                "STOP-LOSS SAFETY FAILURE: order %s for %s was filled but its position cannot be located. "
+                "Attempting ticket-specific emergency close; check MT5 immediately.",
+                ticket, symbol,
+            )
+            tick = mt5.symbol_info_tick(symbol)
+            if tick:
+                close_is_sell = order_type == mt5.ORDER_TYPE_BUY
+                close_request = {
+                    "action": mt5.TRADE_ACTION_DEAL, "position": int(ticket), "symbol": symbol,
+                    "volume": float(volume),
+                    "type": mt5.ORDER_TYPE_SELL if close_is_sell else mt5.ORDER_TYPE_BUY,
+                    "price": float(tick.bid if close_is_sell else tick.ask), "deviation": 20,
+                    "magic": self.magic, "comment": "MGL_NO_SL_EMERGENCY_CLOSE",
+                    "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC,
+                }
+                try:
+                    close_result = mt5.order_send(close_request)
+                    if close_result is None or close_result.retcode != mt5.TRADE_RETCODE_DONE:
+                        close_request["type_filling"] = mt5.ORDER_FILLING_FOK
+                        close_result = mt5.order_send(close_request)
+                    if close_result is None or close_result.retcode != mt5.TRADE_RETCODE_DONE:
+                        logger.critical("EMERGENCY CLOSE FAILED for unverified order %s: %s. MANUAL ACTION REQUIRED NOW.", ticket, close_result.comment if close_result else mt5.last_error())
+                    else:
+                        logger.critical("Emergency close executed for unverified order %s; verify terminal.", ticket)
+                except Exception:
+                    logger.exception("EMERGENCY CLOSE ERROR for order %s. MANUAL ACTION REQUIRED NOW.", ticket)
+            else:
+                logger.critical("No quote for emergency close of order %s. MANUAL ACTION REQUIRED NOW.", ticket)
+            return False
+
+        current_sl = float(getattr(position, "sl", 0.0) or 0.0)
+        if current_sl > 0 and abs(current_sl - expected_sl) <= tolerance:
+            return True
+
+        position_ticket = int(getattr(position, "ticket", ticket))
+        current_tp = float(getattr(position, "tp", 0.0) or 0.0)
+        logger.error("Filled position %s on %s has missing/wrong SL (actual=%s expected=%s); attempting repair.", position_ticket, symbol, current_sl, expected_sl)
+        repair_request = {"action": mt5.TRADE_ACTION_SLTP, "position": position_ticket, "symbol": symbol, "sl": expected_sl, "tp": current_tp}
+        try:
+            repair_result = mt5.order_send(repair_request)
+        except Exception as exc:
+            repair_result = None
+            logger.error("SL repair request raised for position %s: %s", position_ticket, exc)
+
+        if repair_result is not None and repair_result.retcode == mt5.TRADE_RETCODE_DONE:
+            time.sleep(0.1)
+            refreshed = mt5.positions_get(ticket=position_ticket)
+            if refreshed:
+                repaired_sl = float(getattr(refreshed[0], "sl", 0.0) or 0.0)
+                if repaired_sl > 0 and abs(repaired_sl - expected_sl) <= tolerance:
+                    logger.warning("Stop-loss restored and verified for position %s on %s.", position_ticket, symbol)
+                    return True
+
+        logger.critical("SL REPAIR FAILED for position %s on %s. Attempting emergency close; verify terminal immediately.", position_ticket, symbol)
+        tick = mt5.symbol_info_tick(symbol)
+        if tick:
+            pos_type = int(getattr(position, "type", -1))
+            close_is_sell = pos_type == int(mt5.POSITION_TYPE_BUY)
+            close_request = {
+                "action": mt5.TRADE_ACTION_DEAL, "position": position_ticket, "symbol": symbol,
+                "volume": float(getattr(position, "volume", volume)),
+                "type": mt5.ORDER_TYPE_SELL if close_is_sell else mt5.ORDER_TYPE_BUY,
+                "price": float(tick.bid if close_is_sell else tick.ask), "deviation": 20,
+                "magic": self.magic, "comment": "MGL_NO_SL_EMERGENCY_CLOSE",
+                "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC,
+            }
+            try:
+                close_result = mt5.order_send(close_request)
+                if close_result is None or close_result.retcode != mt5.TRADE_RETCODE_DONE:
+                    close_request["type_filling"] = mt5.ORDER_FILLING_FOK
+                    close_result = mt5.order_send(close_request)
+                if close_result is not None and close_result.retcode == mt5.TRADE_RETCODE_DONE:
+                    logger.critical("Unprotected position %s emergency-close request executed.", position_ticket)
+                else:
+                    logger.critical("EMERGENCY CLOSE FAILED for unprotected position %s: %s. MANUAL ACTION REQUIRED NOW.", position_ticket, close_result.comment if close_result else mt5.last_error())
+            except Exception:
+                logger.exception("EMERGENCY CLOSE ERROR for unprotected position %s. MANUAL ACTION REQUIRED NOW.", position_ticket)
+        else:
+            logger.critical("Cannot fetch quote to emergency-close unprotected position %s. MANUAL ACTION REQUIRED NOW.", position_ticket)
+        return False
+
     def _send_single_deal(self, symbol: str, order_type: int, price: float, volume: float, sl: float, tp: float, comment: str) -> Optional[Dict[str, Any]]:
         if mt5 is None or not math.isfinite(float(volume)) or float(volume) <= 0:
             return None
         request = {
-            "action": mt5.TRADE_ACTION_DEAL,
-            "symbol": symbol,
-            "volume": float(volume),
-            "type": order_type,
-            "price": float(price),
-            "sl": float(sl),
-            "tp": float(tp),
-            "deviation": 20,
-            "magic": self.magic,
-            "comment": comment[:31],
-            "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_IOC,
+            "action": mt5.TRADE_ACTION_DEAL, "symbol": symbol, "volume": float(volume),
+            "type": order_type, "price": float(price), "sl": float(sl), "tp": float(tp),
+            "deviation": 20, "magic": self.magic, "comment": comment[:31],
+            "type_time": mt5.ORDER_TIME_GTC, "type_filling": mt5.ORDER_FILLING_IOC,
         }
-        result = mt5.order_send(request)
-        if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
-            request["type_filling"] = mt5.ORDER_FILLING_FOK
-            result = mt5.order_send(request)
-        if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
-            err = result.comment if result else mt5.last_error()
-            logger.error("MT5 order send failed for %s: %s", symbol, err)
+        result = None
+        for filling in (mt5.ORDER_FILLING_IOC, mt5.ORDER_FILLING_FOK):
+            request["type_filling"] = filling
+            try:
+                check = mt5.order_check(request)
+            except Exception as exc:
+                logger.error("Order pre-check raised for %s: %s; refusing to send.", symbol, exc)
+                return None
+            if check is None or getattr(check, "retcode", None) != 0:
+                logger.error("Order pre-check rejected %s (fill=%s): %s; refusing this attempt.", symbol, filling, getattr(check, "comment", mt5.last_error()) if check is not None else mt5.last_error())
+                continue
+            try:
+                result = mt5.order_send(request)
+            except Exception as exc:
+                logger.error("MT5 order_send raised for %s: %s", symbol, exc)
+                result = None
+            if result is not None and result.retcode == mt5.TRADE_RETCODE_DONE:
+                break
+            logger.warning("MT5 order send failed for %s (fill=%s): %s", symbol, filling, result.comment if result is not None else mt5.last_error())
+            result = None
+        if result is None:
             return None
-        executed_p = float(result.price) if (result and hasattr(result, "price") and float(result.price) > 0) else float(price)
-        return {"ticket": result.order, "deal": result.deal, "volume": float(volume), "price": executed_p}
+        if not self._verify_or_restore_stop_loss(int(result.order), symbol, float(volume), order_type, float(sl)):
+            logger.critical("Order %s on %s is NOT confirmed protected. Inspect MT5 positions and logs immediately.", result.order, symbol)
+            return None
+        logger.info("Live order placed with verified SL: ticket=%s symbol=%s lot=%s price=%s SL=%s", result.order, symbol, volume, result.price, sl)
+        return {"ticket": result.order, "deal": result.deal, "volume": float(volume), "price": result.price, "sl_verified": True}
 
     def modify_position_sl(self, ticket: int, symbol: str, new_sl: float, current_tp: float = 0.0) -> bool:
         if not self.ensure_connected():
