@@ -64,6 +64,9 @@ def test_quality_filter_rejects_trend_signal_against_supplied_htf_bias():
 
 def test_completed_historical_trade_is_not_reclassified_as_new_entry():
     signal = make_signal(exit_time=pd.Timestamp.now(tz="UTC") - pd.Timedelta(minutes=2), sl_price=0.0)
-    result = SignalQualityFilter({"enabled": True}).evaluate(signal)
-    assert result.allowed is True
-    assert result.action == "HISTORICAL_TRADE_BYPASS"
+    blocked = SignalQualityFilter({"enabled": True}).evaluate(signal)
+    assert blocked.allowed is False
+    assert blocked.action == "QUALITY_NOT_AN_ENTRY"
+    replay = SignalQualityFilter({"enabled": True}).evaluate(signal, allow_historical=True)
+    assert replay.allowed is True
+    assert replay.action == "HISTORICAL_TRADE_BYPASS"
