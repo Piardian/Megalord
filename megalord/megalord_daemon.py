@@ -482,7 +482,7 @@ class MegalordDaemon:
                 # TP1 Safeguard: Ensure TP1 is at least 0.80R from live entry, and cap Begonya00 TP1 at 1.0R
                 # so partial profit + Break-Even lock triggers reliably before mean-reversion snapback.
                 tp1_val = candidate.tp1_price
-                min_tp1_dist = risk_dist * 0.80
+                min_tp1_dist = risk_dist * 1.00
                 max_tp1_dist = risk_dist * 1.05 if candidate.engine_name == "Begonya00" else risk_dist * 2.0
                 live_tp1_dist = abs(tp1_val - live_p) if tp1_val > 0 else 0.0
 
