@@ -11,8 +11,7 @@
   "risk_sizing": {
     "risk_basis": "equity",
     "base_risk_pct": 0.50,
-    "require_order_calc_profit": true,
-    "risk_tolerance_pct": 0.001
+    "require_order_calc_profit": true
   },
   "signal_quality_filter": {
     "enabled": true,
