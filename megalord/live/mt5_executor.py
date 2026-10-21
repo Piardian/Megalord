@@ -183,7 +183,7 @@ class MegalordMT5Executor:
         logger.warning("No broker-valid volume for %s satisfies the risk budget; trade rejected.", symbol)
         return None
 
-    def _valid_order_geometry(self, direction: str, entry: float, sl: float, tp: float) -> bool:
+    def _valid_order_geometry(self, direction: str, entry: float, sl: float, tp: float, min_rr: float = 0.50) -> bool:
         side = str(direction).upper()
         if side not in ("LONG", "BUY", "SHORT", "SELL"):
             logger.error("Unsupported order direction %r.", direction)
@@ -197,6 +197,14 @@ class MegalordMT5Executor:
             return False
         if not is_buy and not (tp < entry < sl):
             logger.error("Invalid SHORT geometry: require TP < entry < SL (TP=%s entry=%s SL=%s).", tp, entry, sl)
+            return False
+        sl_dist = abs(float(entry) - float(sl))
+        tp_dist = abs(float(tp) - float(entry))
+        if sl_dist <= 0 or (tp_dist / sl_dist) < float(min_rr):
+            logger.error(
+                "Order geometry rejected: R:R ratio %.3f is below required minimum %.2f (Risk=%.5f, Reward=%.5f).",
+                (tp_dist / sl_dist) if sl_dist > 0 else 0.0, float(min_rr), sl_dist, tp_dist
+            )
             return False
         return True
 
@@ -319,10 +327,10 @@ class MegalordMT5Executor:
         is_buy = side in ("LONG", "BUY")
         order_type = mt5.ORDER_TYPE_BUY if is_buy else mt5.ORDER_TYPE_SELL
         entry_price = float(tick.ask if is_buy else tick.bid)
-        if not self._valid_order_geometry(side, entry_price, sl_price, tp2_price):
+        if not self._valid_order_geometry(side, entry_price, sl_price, tp2_price, min_rr=1.20):
             return None
-        if not self._valid_order_geometry(side, entry_price, sl_price, tp1_price):
-            logger.error("Twin order rejected: TP1 geometry is invalid.")
+        if not self._valid_order_geometry(side, entry_price, sl_price, tp1_price, min_rr=0.60):
+            logger.error("Twin order rejected: TP1 geometry is invalid or collapsed R:R.")
             return None
 
         total_lot = self.calculate_lot_size(symbol, entry_price, sl_price, risk_mult)
@@ -373,7 +381,7 @@ class MegalordMT5Executor:
                 "total_lot": leg1_lot, "is_split": False, "partial_execution": True,
             }
         entry2 = float(tick2.ask if is_buy else tick2.bid)
-        if not self._valid_order_geometry(side, entry2, sl_price, tp2_price):
+        if not self._valid_order_geometry(side, entry2, sl_price, tp2_price, min_rr=1.20):
             logger.error("Price moved past valid TP2/SL geometry after TP1 leg; second leg not sent.")
             return {
                 "leg1_ticket": res1["ticket"], "leg1_vol": leg1_lot, "leg1_tp": tp1_price,
@@ -562,8 +570,9 @@ class MegalordMT5Executor:
         if not self._verify_or_restore_stop_loss(int(result.order), symbol, float(volume), order_type, float(sl)):
             logger.critical("Order %s on %s is NOT confirmed protected. Inspect MT5 positions and logs immediately.", result.order, symbol)
             return None
-        logger.info("Live order placed with verified SL: ticket=%s symbol=%s lot=%s price=%s SL=%s", result.order, symbol, volume, result.price, sl)
-        return {"ticket": result.order, "deal": result.deal, "volume": float(volume), "price": result.price, "sl_verified": True}
+        executed_price = float(result.price) if (result and hasattr(result, "price") and float(result.price) > 0) else float(price)
+        logger.info("Live order placed with verified SL: ticket=%s symbol=%s lot=%s price=%s SL=%s", result.order, symbol, volume, executed_price, sl)
+        return {"ticket": result.order, "deal": result.deal, "volume": float(volume), "price": executed_price, "sl_verified": True}
 
     def modify_position_sl(self, ticket: int, symbol: str, new_sl: float, current_tp: float = 0.0) -> bool:
         if not self.ensure_connected():

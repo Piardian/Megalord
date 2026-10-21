@@ -344,23 +344,34 @@ class MegalordDaemon:
                     })
                     continue
 
+                # Query fresh broker bid/ask to calculate true live risk and reward distances
+                market_ctx = self.mt5_executor.get_market_quality_context(candidate.symbol, candidate.direction)
+                live_p = market_ctx.get("current_price", candidate.entry_price) if market_ctx else candidate.entry_price
+
                 sl_val = candidate.sl_price or 0.0
                 if sl_val <= 0:
                     sl_dist = 0.0020 if "JPY" not in candidate.symbol else 0.20
-                    sl_val = (candidate.entry_price - sl_dist) if candidate.direction == "LONG" else (candidate.entry_price + sl_dist)
+                    sl_val = (live_p - sl_dist) if candidate.direction == "LONG" else (live_p + sl_dist)
 
-                risk_dist = abs(candidate.entry_price - sl_val)
+                risk_dist = abs(live_p - sl_val)
                 if risk_dist <= 0:
                     risk_dist = 0.0020 if "JPY" not in candidate.symbol else 0.20
 
-                # 1:2R veya daha fazla likidite havuzu hedeflerini kullan (TP1 ve TP2)
+                # TP1 Safeguard: Reward from live entry must be at least 0.80R. If signal TP1 is collapsed due to drift, dynamically set TP1 = 1.0R from live price
                 tp1_val = candidate.tp1_price
-                if tp1_val <= 0:
-                    tp1_val = (candidate.entry_price + risk_dist * 1.0) if candidate.direction == "LONG" else (candidate.entry_price - risk_dist * 1.0)
+                min_tp1_dist = risk_dist * 0.80
+                live_tp1_dist = abs(tp1_val - live_p) if tp1_val > 0 else 0.0
 
+                if tp1_val <= 0 or live_tp1_dist < min_tp1_dist:
+                    tp1_val = round((live_p + risk_dist * 1.0) if candidate.direction == "LONG" else (live_p - risk_dist * 1.0), 5)
+
+                # TP2 Safeguard: Runner target must be at least 1.50R from live entry
                 tp2_val = candidate.tp2_price
-                if tp2_val <= 0:
-                    tp2_val = (candidate.entry_price + risk_dist * 3.0) if candidate.direction == "LONG" else (candidate.entry_price - risk_dist * 3.0)
+                min_tp2_dist = risk_dist * 1.50
+                live_tp2_dist = abs(tp2_val - live_p) if tp2_val > 0 else 0.0
+
+                if tp2_val <= 0 or live_tp2_dist < min_tp2_dist:
+                    tp2_val = round((live_p + risk_dist * 3.0) if candidate.direction == "LONG" else (live_p - risk_dist * 3.0), 5)
 
                 # İkiz Emir (Twin Orders) Mimarisi: %50 TP1 Kâr Kilidi, %50 TP2 Runner
                 live_res = self.mt5_executor.place_twin_market_orders(
@@ -452,6 +463,24 @@ class MegalordDaemon:
             if self.mode == "mt5_live" and (pos.get("leg1_ticket") or pos.get("ticket")):
                 l1_tick = pos.get("leg1_ticket") or pos.get("ticket")
                 l2_tick = pos.get("leg2_ticket")
+
+                # SL Watchdog: Stop Loss Guard
+                if l1_tick:
+                    l1_chk = self.mt5_executor.get_open_position(l1_tick)
+                    if l1_chk is not None and not (float(getattr(l1_chk, "sl", 0.0) or 0.0) > 0):
+                        exp_sl = float(pos.get("sl_price", 0.0))
+                        if exp_sl > 0:
+                            print(f"[SL Watchdog] 🚨 ACİL: Leg 1 #{l1_tick} ({pos['symbol']}) stopsuz tespit edildi! Stop {exp_sl} seviyesine geri yükleniyor...")
+                            self.mt5_executor.modify_position_sl(l1_tick, pos["symbol"], exp_sl, pos.get("leg1_tp", 0.0))
+
+                if l2_tick:
+                    l2_chk = self.mt5_executor.get_open_position(l2_tick)
+                    if l2_chk is not None and not (float(getattr(l2_chk, "sl", 0.0) or 0.0) > 0):
+                        exp_sl = pos.get("entry_price") if pos.get("be_moved") else pos.get("sl_price")
+                        exp_sl = float(exp_sl or 0.0)
+                        if exp_sl > 0:
+                            print(f"[SL Watchdog] 🚨 ACİL: Leg 2 #{l2_tick} ({pos['symbol']}) stopsuz tespit edildi! Stop {exp_sl} seviyesine geri yükleniyor...")
+                            self.mt5_executor.modify_position_sl(l2_tick, pos["symbol"], exp_sl, pos.get("leg2_tp", 0.0))
 
                 # Bacak 1 Kontrolü (TP1 - %50 Kâr Kilidi)
                 if pos.get("leg1_open", True) and l1_tick:
