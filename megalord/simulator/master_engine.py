@@ -59,7 +59,7 @@ class MegalordSimulator:
                 daily_realized_loss_r = 0.0
 
             # 1. Arbiter Evaluation (Confluence, Clone Cap, Trend vs MR)
-            arb_decision = self.arbiter.evaluate_signal(sig, open_positions)
+            arb_decision = self.arbiter.evaluate_signal(sig, open_positions, allow_historical=True)
             if not arb_decision.allowed:
                 rejected_trades.append({
                     "signal_id": sig.signal_id,
