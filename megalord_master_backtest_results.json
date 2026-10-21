@@ -1,0 +1,32 @@
+{
+  "results_1y": {
+    "total_signals_received": 311,
+    "executed_trades_count": 129,
+    "rejected_trades_count": 182,
+    "win_rate_pct": 55.04,
+    "profit_factor": 1.84,
+    "net_r": 37.38,
+    "expectancy_r": 0.29,
+    "max_drawdown_r": 4.05,
+    "return_to_dd": 9.23,
+    "annualized_sharpe": 4.28
+  },
+  "results_3m": {
+    "total_signals_received": 167,
+    "executed_trades_count": 81,
+    "rejected_trades_count": 86,
+    "win_rate_pct": 53.09,
+    "profit_factor": 2.15,
+    "net_r": 30.72,
+    "expectancy_r": 0.379,
+    "max_drawdown_r": 3.4,
+    "return_to_dd": 9.03,
+    "annualized_sharpe": 5.25
+  },
+  "action_counts": {
+    "PROCEED": 129,
+    "COMPASS_ONLY_RECORDED": 100,
+    "ENGINE_DISABLED": 26,
+    "FIREWALL_BLOCKED": 56
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "system_name": "Megalord Meta-Allocator & Multi-Strategy Orchestrator",
+  "version": "2.0.0",
+  "target_account": 26735345,
+  "telegram": {
+    "bot_username": "Piardian_bot",
+    "bot_token": "",
+    "chat_id": "",
+    "enabled": true
+  },
+  "firewall": {
+    "max_daily_loss_pct": 2.5,
+    "max_worst_case_exposure_pct": 2.5,
+    "max_global_heat_pct": 3.5,
+    "currency_cluster_caps": {
+      "USD": 1.5,
+      "JPY": 1.5,
+      "EUR": 1.5,
+      "GBP": 1.5,
+      "XAU": 1.5,
+      "INDEX": 1.5,
+      "CRYPTO": 1.5
+    }
+  },
+  "families": {
+    "FAMILY_SMC": ["Begonya00", "Begonya", "ChecklistTrigger"],
+    "FAMILY_MACRO_TREND": ["Convexity_v2"],
+    "FAMILY_AMT_VWAP": ["Pragma"],
+    "FAMILY_ORDERFLOW": ["Trawma"],
+    "FAMILY_STAT_QUANT": ["Stigma"]
+  },
+  "allocator": {
+    "base_engine_weights": {
+      "Begonya00": 0.50,
+      "Begonya": 0.0,
+      "ChecklistTrigger": 0.50,
+      "Convexity_v2": 0.0,
+      "Pragma": 0.45,
+      "Trawma": 0.45,
+      "Stigma": 0.45
+    },
+    "engine_execution_enabled": {
+      "Begonya00": true,
+      "Begonya": false,
+      "ChecklistTrigger": true,
+      "Convexity_v2": false,
+      "Pragma": true,
+      "Trawma": true,
+      "Stigma": true
+    },
+    "compass_only_engines": ["Convexity_v2"],
+    "orthogonal_confluence_multiplier": 1.30,
+    "clone_confluence_cap": 0.60,
+    "counter_trend_mean_reversion_multiplier": 0.50,
+    "consecutive_loss_cooldown_threshold": 3,
+    "consecutive_loss_cooldown_multiplier": 0.50
+  }
+}

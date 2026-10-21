@@ -1,0 +1,106 @@
+[
+  {
+    "name": "2026-10 (Ekim 2026)",
+    "key": "2026-10",
+    "signals": 70,
+    "executed": 27,
+    "wins": 13,
+    "losses": 12,
+    "win_rate": 48.1,
+    "net_r": 6.55,
+    "exp_r": 0.243,
+    "pf": 1.77,
+    "max_dd": 2.97,
+    "engine_breakdown": {
+      "Trawma": 13,
+      "Begonya00": 11,
+      "Stigma": 3
+    }
+  },
+  {
+    "name": "2026-09 (Eyl\u00fcl 2026)",
+    "key": "2026-09",
+    "signals": 50,
+    "executed": 30,
+    "wins": 16,
+    "losses": 14,
+    "win_rate": 53.3,
+    "net_r": 9.22,
+    "exp_r": 0.307,
+    "pf": 1.94,
+    "max_dd": 3.4,
+    "engine_breakdown": {
+      "Trawma": 14,
+      "ChecklistTrigger": 10,
+      "Stigma": 6
+    }
+  },
+  {
+    "name": "2026-08 (A\u011fustos 2026)",
+    "key": "2026-08",
+    "signals": 30,
+    "executed": 13,
+    "wins": 8,
+    "losses": 5,
+    "win_rate": 61.5,
+    "net_r": 9.09,
+    "exp_r": 0.699,
+    "pf": 2.83,
+    "max_dd": 1.93,
+    "engine_breakdown": {
+      "ChecklistTrigger": 8,
+      "Stigma": 3,
+      "Trawma": 2
+    }
+  },
+  {
+    "name": "2026-06 (Haziran 2026)",
+    "key": "2026-06",
+    "signals": 29,
+    "executed": 11,
+    "wins": 6,
+    "losses": 5,
+    "win_rate": 54.5,
+    "net_r": -0.73,
+    "exp_r": -0.066,
+    "pf": 0.85,
+    "max_dd": 2.72,
+    "engine_breakdown": {
+      "Stigma": 6,
+      "Trawma": 5
+    }
+  },
+  {
+    "name": "2026-04 (Nisan 2026)",
+    "key": "2026-04",
+    "signals": 19,
+    "executed": 9,
+    "wins": 6,
+    "losses": 3,
+    "win_rate": 66.7,
+    "net_r": 1.12,
+    "exp_r": 0.124,
+    "pf": 1.39,
+    "max_dd": 2.85,
+    "engine_breakdown": {
+      "Stigma": 8,
+      "Trawma": 1
+    }
+  },
+  {
+    "name": "2025-12 (Aral\u0131k 2025)",
+    "key": "2025-12",
+    "signals": 31,
+    "executed": 16,
+    "wins": 8,
+    "losses": 8,
+    "win_rate": 50.0,
+    "net_r": 4.36,
+    "exp_r": 0.272,
+    "pf": 1.75,
+    "max_dd": 4.05,
+    "engine_breakdown": {
+      "Pragma": 16
+    }
+  }
+]

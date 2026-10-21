@@ -1,0 +1,102 @@
+{
+  "default_freeze_minutes_before": 5,
+  "default_freeze_minutes_after": 5,
+  "scheduled_events": [
+    {
+      "id": "CAD_CPI m/m",
+      "name": "CPI m/m",
+      "currency": "CAD",
+      "impact": "CRITICAL",
+      "event_time_utc": "2026-10-19T08:30:00-04:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "CAD_Median CPI y/y",
+      "name": "Median CPI y/y",
+      "currency": "CAD",
+      "impact": "CRITICAL",
+      "event_time_utc": "2026-10-19T08:30:00-04:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "CAD_Trimmed CPI y/y",
+      "name": "Trimmed CPI y/y",
+      "currency": "CAD",
+      "impact": "CRITICAL",
+      "event_time_utc": "2026-10-19T08:30:00-04:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "CAD_Common CPI y/y",
+      "name": "Common CPI y/y",
+      "currency": "CAD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-10-19T08:30:00-04:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "CAD_Core CPI m/m",
+      "name": "Core CPI m/m",
+      "currency": "CAD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-10-19T08:30:00-04:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "GBP_CPI y/y",
+      "name": "CPI y/y",
+      "currency": "GBP",
+      "impact": "CRITICAL",
+      "event_time_utc": "2026-10-21T02:00:00-04:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "GBP_Core CPI y/y",
+      "name": "Core CPI y/y",
+      "currency": "GBP",
+      "impact": "HIGH",
+      "event_time_utc": "2026-10-21T02:00:00-04:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "NZD_CPI q/q",
+      "name": "CPI q/q",
+      "currency": "NZD",
+      "impact": "CRITICAL",
+      "event_time_utc": "2026-10-21T17:45:00-04:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "JPY_National Core CPI y/y",
+      "name": "National Core CPI y/y",
+      "currency": "JPY",
+      "impact": "HIGH",
+      "event_time_utc": "2026-10-22T19:30:00-04:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "CHF_Daylight Saving Time Shift",
+      "name": "Daylight Saving Time Shift",
+      "currency": "CHF",
+      "impact": "HIGH",
+      "event_time_utc": "2026-10-24T21:00:00-04:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "EUR_Daylight Saving Time Shift",
+      "name": "Daylight Saving Time Shift",
+      "currency": "EUR",
+      "impact": "HIGH",
+      "event_time_utc": "2026-10-24T21:00:00-04:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "GBP_Daylight Saving Time Shift",
+      "name": "Daylight Saving Time Shift",
+      "currency": "GBP",
+      "impact": "HIGH",
+      "event_time_utc": "2026-10-24T21:00:00-04:00",
+      "affects_all_symbols": false
+    }
+  ]
+}

@@ -1,0 +1,394 @@
+[
+  {
+    "window": "2025-03 (Mart 2025)",
+    "total_signals": 10,
+    "executed_trades": 0,
+    "win_count": 0,
+    "loss_count": 0,
+    "win_rate_pct": 0.0,
+    "net_r": 0.0,
+    "expectancy_r": 0.0,
+    "profit_factor": 0.0,
+    "max_drawdown_r": 0.0,
+    "annualized_sharpe": 0.0,
+    "trades": []
+  },
+  {
+    "window": "2025-07 (Temmuz 2025)",
+    "total_signals": 8,
+    "executed_trades": 0,
+    "win_count": 0,
+    "loss_count": 0,
+    "win_rate_pct": 0.0,
+    "net_r": 0.0,
+    "expectancy_r": 0.0,
+    "profit_factor": 0.0,
+    "max_drawdown_r": 0.0,
+    "annualized_sharpe": 0.0,
+    "trades": []
+  },
+  {
+    "window": "2025-11 (Kas\u0131m 2025)",
+    "total_signals": 9,
+    "executed_trades": 0,
+    "win_count": 0,
+    "loss_count": 0,
+    "win_rate_pct": 0.0,
+    "net_r": 0.0,
+    "expectancy_r": 0.0,
+    "profit_factor": 0.0,
+    "max_drawdown_r": 0.0,
+    "annualized_sharpe": 0.0,
+    "trades": []
+  },
+  {
+    "window": "2026-01 (Ocak 2026)",
+    "total_signals": 14,
+    "executed_trades": 0,
+    "win_count": 0,
+    "loss_count": 0,
+    "win_rate_pct": 0.0,
+    "net_r": 0.0,
+    "expectancy_r": 0.0,
+    "profit_factor": 0.0,
+    "max_drawdown_r": 0.0,
+    "annualized_sharpe": 0.0,
+    "trades": []
+  },
+  {
+    "window": "2026-05 (May\u0131s 2026)",
+    "total_signals": 11,
+    "executed_trades": 4,
+    "win_count": 4,
+    "loss_count": 0,
+    "win_rate_pct": 100.0,
+    "net_r": 2.34,
+    "expectancy_r": 0.584,
+    "profit_factor": 99.0,
+    "max_drawdown_r": 0.0,
+    "annualized_sharpe": 19.01,
+    "trades": [
+      {
+        "symbol": "NAS100",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 0.22225736125316312,
+        "action": "PROCEED",
+        "time": "2026-05-04 13:45:00+00:00"
+      },
+      {
+        "symbol": "USDJPY",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 0.5421280020946211,
+        "action": "PROCEED",
+        "time": "2026-05-12 06:45:00+00:00"
+      },
+      {
+        "symbol": "NAS100",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 1.285627490117638,
+        "action": "PROCEED",
+        "time": "2026-05-21 10:30:00+00:00"
+      },
+      {
+        "symbol": "NAS100",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 0.28614339983539255,
+        "action": "PROCEED",
+        "time": "2026-05-27 18:30:00+00:00"
+      }
+    ]
+  },
+  {
+    "window": "2026-09 (Eyl\u00fcl 2026)",
+    "total_signals": 50,
+    "executed_trades": 30,
+    "win_count": 16,
+    "loss_count": 14,
+    "win_rate_pct": 53.3,
+    "net_r": 9.57,
+    "expectancy_r": 0.319,
+    "profit_factor": 1.93,
+    "max_drawdown_r": 3.4,
+    "annualized_sharpe": 5.1,
+    "trades": [
+      {
+        "symbol": "USDCHF",
+        "engine": "ChecklistTrigger",
+        "direction": "LONG",
+        "risk_r": 1.0,
+        "net_r": 2.0,
+        "action": "PROCEED",
+        "time": "2026-09-01 01:15:00+00:00"
+      },
+      {
+        "symbol": "SOLUSD",
+        "engine": "ChecklistTrigger",
+        "direction": "SHORT",
+        "risk_r": 1.0,
+        "net_r": 4.0,
+        "action": "PROCEED",
+        "time": "2026-09-01 12:45:00+00:00"
+      },
+      {
+        "symbol": "USDJPY",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -0.9248898678414084,
+        "action": "PROCEED",
+        "time": "2026-09-02 12:00:00+00:00"
+      },
+      {
+        "symbol": "EURUSD",
+        "engine": "ChecklistTrigger",
+        "direction": "LONG",
+        "risk_r": 1.0,
+        "net_r": 0.75,
+        "action": "PROCEED",
+        "time": "2026-09-02 20:15:00+00:00"
+      },
+      {
+        "symbol": "NZDUSD",
+        "engine": "ChecklistTrigger",
+        "direction": "SHORT",
+        "risk_r": 1.0,
+        "net_r": 2.0,
+        "action": "PROCEED",
+        "time": "2026-09-03 00:30:00+00:00"
+      },
+      {
+        "symbol": "USDJPY",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": 1.6227868698269623,
+        "action": "PROCEED",
+        "time": "2026-09-03 08:30:00+00:00"
+      },
+      {
+        "symbol": "NAS100",
+        "engine": "ChecklistTrigger",
+        "direction": "LONG",
+        "risk_r": 1.0,
+        "net_r": -1.0,
+        "action": "PROCEED",
+        "time": "2026-09-03 15:15:00+00:00"
+      },
+      {
+        "symbol": "EURCHF",
+        "engine": "ChecklistTrigger",
+        "direction": "LONG",
+        "risk_r": 1.0,
+        "net_r": -1.0,
+        "action": "PROCEED",
+        "time": "2026-09-03 19:04:00+00:00"
+      },
+      {
+        "symbol": "GBPUSD",
+        "engine": "ChecklistTrigger",
+        "direction": "SHORT",
+        "risk_r": 1.0,
+        "net_r": -0.5,
+        "action": "PROCEED",
+        "time": "2026-09-04 13:01:00+00:00"
+      },
+      {
+        "symbol": "NAS100",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -0.9015854953724777,
+        "action": "PROCEED",
+        "time": "2026-09-04 16:45:00+00:00"
+      },
+      {
+        "symbol": "NAS100",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 1.0735583049868644,
+        "action": "PROCEED",
+        "time": "2026-09-08 17:30:00+00:00"
+      },
+      {
+        "symbol": "GBPCHF",
+        "engine": "ChecklistTrigger",
+        "direction": "SHORT",
+        "risk_r": 0.5,
+        "net_r": -0.5,
+        "action": "PROCEED",
+        "time": "2026-09-10 08:45:00+00:00"
+      },
+      {
+        "symbol": "ETHUSD",
+        "engine": "ChecklistTrigger",
+        "direction": "SHORT",
+        "risk_r": 0.5,
+        "net_r": -0.5,
+        "action": "PROCEED",
+        "time": "2026-09-10 17:15:00+00:00"
+      },
+      {
+        "symbol": "NZDUSD",
+        "engine": "ChecklistTrigger",
+        "direction": "SHORT",
+        "risk_r": 0.5,
+        "net_r": 0.7,
+        "action": "PROCEED",
+        "time": "2026-09-11 00:00:00+00:00"
+      },
+      {
+        "symbol": "BTCUSD",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": 0.45512823767766003,
+        "action": "PROCEED",
+        "time": "2026-09-11 16:00:00+00:00"
+      },
+      {
+        "symbol": "NAS100",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": -0.8918858487428092,
+        "action": "PROCEED",
+        "time": "2026-09-14 17:30:00+00:00"
+      },
+      {
+        "symbol": "USDJPY",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -0.10258620689655958,
+        "action": "PROCEED",
+        "time": "2026-09-15 09:45:00+00:00"
+      },
+      {
+        "symbol": "LINKUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 1.5651882916342923,
+        "action": "PROCEED",
+        "time": "2026-09-18 13:45:00+00:00"
+      },
+      {
+        "symbol": "LINKUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 0.002554202142272736,
+        "action": "PROCEED",
+        "time": "2026-09-21 09:30:00+00:00"
+      },
+      {
+        "symbol": "LINKUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -0.8949425506247295,
+        "action": "PROCEED",
+        "time": "2026-09-21 20:30:00+00:00"
+      },
+      {
+        "symbol": "LINKUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -0.8959791555786786,
+        "action": "PROCEED",
+        "time": "2026-09-22 13:15:00+00:00"
+      },
+      {
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": 0.23678280000000002,
+        "action": "PROCEED",
+        "time": "2026-09-22 14:30:00+00:00"
+      },
+      {
+        "symbol": "LINKUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": 1.566472446280992,
+        "action": "PROCEED",
+        "time": "2026-09-23 09:00:00+00:00"
+      },
+      {
+        "symbol": "NAS100",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -1.0473020046220907,
+        "action": "PROCEED",
+        "time": "2026-09-23 18:00:00+00:00"
+      },
+      {
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 1.099980420730512,
+        "action": "PROCEED",
+        "time": "2026-09-24 10:15:00+00:00"
+      },
+      {
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -0.06460105134023515,
+        "action": "PROCEED",
+        "time": "2026-09-25 16:15:00+00:00"
+      },
+      {
+        "symbol": "LINKUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 0.5168274175084183,
+        "action": "PROCEED",
+        "time": "2026-09-28 12:15:00+00:00"
+      },
+      {
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -1.0214301259675231,
+        "action": "PROCEED",
+        "time": "2026-09-29 16:30:00+00:00"
+      },
+      {
+        "symbol": "NAS100",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 1.0820927917932033,
+        "action": "PROCEED",
+        "time": "2026-09-29 20:15:00+00:00"
+      },
+      {
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": 1.1440762747405315,
+        "action": "PROCEED",
+        "time": "2026-09-30 13:45:00+00:00"
+      }
+    ]
+  }
+]
