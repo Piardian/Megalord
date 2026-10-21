@@ -414,7 +414,7 @@ class MegalordDaemon:
                 "leg2_vol": live_res.get("leg2_vol", 0.0) if live_res else 0.0,
                 "leg2_tp": tp2_val if self.mode == "mt5_live" else candidate.tp2_price,
                 "leg2_open": bool(live_res.get("leg2_ticket")) if live_res else False,
-                "entry_price": live_res.get("entry_price", candidate.entry_price) if live_res else candidate.entry_price,
+                "entry_price": (float(live_res.get("entry_price") or 0.0) if (live_res and float(live_res.get("entry_price") or 0.0) > 0) else float(candidate.entry_price)),
                 "sl_price": sl_val if self.mode == "mt5_live" else candidate.sl_price,
                 "risk_dist": risk_dist if self.mode == "mt5_live" else abs(candidate.entry_price - candidate.sl_price),
                 "be_moved": False,
@@ -495,8 +495,14 @@ class MegalordDaemon:
                             )
                             # Bacak 2'yi Giriş Fiyatına (Break-Even) çek
                             if l2_tick and not pos.get("be_moved"):
-                                be_p = pos["entry_price"]
-                                mod_ok = self.mt5_executor.modify_position_sl(l2_tick, pos["symbol"], be_p, pos.get("leg2_tp", 0.0))
+                                be_p = pos.get("entry_price", 0.0)
+                                if not be_p or be_p <= 0:
+                                    l2_open_p = self.mt5_executor.get_open_position(l2_tick)
+                                    if l2_open_p and l2_open_p.price_open > 0:
+                                        be_p = float(l2_open_p.price_open)
+                                        pos["entry_price"] = be_p
+                                if be_p and be_p > 0:
+                                    mod_ok = self.mt5_executor.modify_position_sl(l2_tick, pos["symbol"], be_p, pos.get("leg2_tp", 0.0))
                                 if mod_ok:
                                     pos["be_moved"] = True
                                     self.notifier.send_alert(
@@ -509,16 +515,19 @@ class MegalordDaemon:
                 if l2_tick:
                     l2_pos = self.mt5_executor.get_open_position(l2_tick)
                     if l2_pos is not None:
+                        if pos.get("entry_price", 0.0) <= 0 and l2_pos.price_open > 0:
+                            pos["entry_price"] = float(l2_pos.price_open)
                         # Bacak 2 açık: Fiyat +1.5R'a geldiyse Stopu +0.75R'a taşı (İz Süren Stop)
                         tick_live = mt5.symbol_info_tick(pos["symbol"])
-                        if tick_live and pos.get("risk_dist", 0.0) > 0:
+                        if tick_live and pos.get("risk_dist", 0.0) > 0 and pos.get("entry_price", 0.0) > 0:
                             cur_p = tick_live.bid if pos["direction"] == "LONG" else tick_live.ask
                             fav_dist = (cur_p - pos["entry_price"]) if pos["direction"] == "LONG" else (pos["entry_price"] - cur_p)
                             r_dist = pos["risk_dist"]
 
                             if fav_dist >= (r_dist * 1.5) and pos.get("trailing_level", 0.0) < 0.75:
                                 trail_sl = round(pos["entry_price"] + (r_dist * 0.75), 5) if pos["direction"] == "LONG" else round(pos["entry_price"] - (r_dist * 0.75), 5)
-                                mod_trail = self.mt5_executor.modify_position_sl(l2_tick, pos["symbol"], trail_sl, pos.get("leg2_tp", 0.0))
+                                if trail_sl > 0:
+                                    mod_trail = self.mt5_executor.modify_position_sl(l2_tick, pos["symbol"], trail_sl, pos.get("leg2_tp", 0.0))
                                 if mod_trail:
                                     pos["trailing_level"] = 0.75
                                     self.notifier.send_alert(

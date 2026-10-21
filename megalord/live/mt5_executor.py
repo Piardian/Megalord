@@ -430,10 +430,14 @@ class MegalordMT5Executor:
             err = result.comment if result else mt5.last_error()
             logger.error("MT5 order send failed for %s: %s", symbol, err)
             return None
-        return {"ticket": result.order, "deal": result.deal, "volume": float(volume), "price": result.price}
+        executed_p = float(result.price) if (result and hasattr(result, "price") and float(result.price) > 0) else float(price)
+        return {"ticket": result.order, "deal": result.deal, "volume": float(volume), "price": executed_p}
 
     def modify_position_sl(self, ticket: int, symbol: str, new_sl: float, current_tp: float = 0.0) -> bool:
         if not self.ensure_connected():
+            return False
+        if not math.isfinite(float(new_sl)) or float(new_sl) <= 0:
+            logger.error("Refusing to modify SL for %s #%s to non-positive value: %s", symbol, ticket, new_sl)
             return False
         req = {
             "action": mt5.TRADE_ACTION_SLTP,
