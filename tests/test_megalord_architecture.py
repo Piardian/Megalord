@@ -32,7 +32,8 @@ class TestMegalordArchitecture(unittest.TestCase):
             math_family=MathFamily.FAMILY_SMC,
             strategy_regime=StrategyRegime.TREND_MOMENTUM,
             symbol="EURUSD", direction="LONG",
-            entry_time=self.now, exit_time=self.now + pd.Timedelta(hours=2)
+            entry_time=self.now, exit_time=None,
+            entry_price=1.1000, sl_price=1.0950, tp2_price=1.1100,
         )
 
         decision = self.arbiter.evaluate_signal(sig_chk, [pos_b00])
@@ -58,7 +59,8 @@ class TestMegalordArchitecture(unittest.TestCase):
             math_family=MathFamily.FAMILY_ORDERFLOW,
             strategy_regime=StrategyRegime.TREND_MOMENTUM,
             symbol="BTCUSD", direction="LONG",
-            entry_time=self.now, exit_time=self.now + pd.Timedelta(hours=1)
+            entry_time=self.now, exit_time=None,
+            entry_price=100000.0, sl_price=99000.0, tp2_price=102000.0,
         )
 
         decision = self.arbiter.evaluate_signal(sig_trawma, [pos_pragma])
@@ -83,7 +85,8 @@ class TestMegalordArchitecture(unittest.TestCase):
             math_family=MathFamily.FAMILY_SMC,
             strategy_regime=StrategyRegime.TREND_MOMENTUM,
             symbol="XAUUSD", direction="SHORT",
-            entry_time=self.now, exit_time=self.now + pd.Timedelta(hours=1)
+            entry_time=self.now, exit_time=None,
+            entry_price=2000.0, sl_price=2010.0, tp2_price=1980.0,
         )
 
         decision = self.arbiter.evaluate_signal(sig_mom_short, [pos_convexity])
@@ -103,7 +106,8 @@ class TestMegalordArchitecture(unittest.TestCase):
             math_family=MathFamily.FAMILY_STAT_QUANT,
             strategy_regime=StrategyRegime.MEAN_REVERSION,
             symbol="NAS100", direction="SHORT",
-            entry_time=self.now, exit_time=self.now + pd.Timedelta(hours=1)
+            entry_time=self.now, exit_time=None,
+            entry_price=20000.0, sl_price=20100.0, tp2_price=19800.0,
         )
 
         decision = self.arbiter.evaluate_signal(sig_mr_short, [pos_convexity])
