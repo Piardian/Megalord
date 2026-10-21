@@ -325,6 +325,7 @@ class MegalordDaemon:
 
             cycle_results["approved"] += 1
             live_ticket = None
+            live_res = None  # Shadow mode has no broker execution result.
 
             # If MT5 Live Mode is active, send real order to The 5%ers broker
             if self.mode == "mt5_live":
