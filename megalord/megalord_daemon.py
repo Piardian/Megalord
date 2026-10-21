@@ -187,7 +187,11 @@ class MegalordDaemon:
                 entry_p = float(mp.price_open or 0.0)
                 sl_p = float(mp.sl or 0.0)
                 tp_p = float(mp.tp or 0.0)
-                r_dist = abs(entry_p - sl_p) if (entry_p > 0 and sl_p > 0) else 0.0
+                already_be = (
+                    (direction == "LONG" and sl_p >= entry_p > 0)
+                    or (direction == "SHORT" and 0 < sl_p <= entry_p)
+                )
+                r_dist = abs(entry_p - sl_p) if (entry_p > 0 and sl_p > 0 and not already_be) else (entry_p * 0.003)
                 synced_record = {
                     "signal_id": f"MT5_SYNC_{t_id}",
                     "engine_name": "MT5_Synced",
@@ -216,7 +220,7 @@ class MegalordDaemon:
                     "entry_price": entry_p,
                     "sl_price": sl_p,
                     "risk_dist": r_dist,
-                    "be_moved": False,
+                    "be_moved": already_be,
                     "be_pending": False,
                     "trailing_level": 0.0,
                 }
@@ -258,6 +262,17 @@ class MegalordDaemon:
         processed_set = set(self.state.get("processed_signal_ids", []))
         new_signals = [s for s in all_signals if s.signal_id not in processed_set]
         return new_signals
+
+    @staticmethod
+    def _is_sl_tightening(direction: str, current_sl: float, candidate_sl: float) -> bool:
+        """Ratchet guard: ensures BE/Trailing updates only tighten SL and never loosen it."""
+        if candidate_sl <= 0:
+            return False
+        if current_sl <= 0:
+            return True
+        if direction == "LONG":
+            return candidate_sl > (current_sl + 1e-7)
+        return candidate_sl < (current_sl - 1e-7)
 
     def _compute_be_price(self, pos: Dict[str, Any], default_entry: float = 0.0) -> float:
         """Computes Break-Even price with a +0.05R commission/spread buffer."""
@@ -672,8 +687,16 @@ class MegalordDaemon:
                         if fav_dist >= (r_dist * 0.80) and not pos.get("be_moved"):
                             be_p = self._compute_be_price(pos)
                             if be_p > 0:
-                                ok1 = self.mt5_executor.modify_position_sl(l1_tick, pos["symbol"], be_p, pos.get("leg1_tp", 0.0)) if l1_live else True
-                                ok2 = self.mt5_executor.modify_position_sl(l2_tick, pos["symbol"], be_p, pos.get("leg2_tp", 0.0)) if l2_live else True
+                                ok1 = (
+                                    self.mt5_executor.modify_position_sl(l1_tick, pos["symbol"], be_p, pos.get("leg1_tp", 0.0))
+                                    if (l1_live and self._is_sl_tightening(pos["direction"], float(l1_live.sl or 0.0), be_p))
+                                    else True
+                                )
+                                ok2 = (
+                                    self.mt5_executor.modify_position_sl(l2_tick, pos["symbol"], be_p, pos.get("leg2_tp", 0.0))
+                                    if (l2_live and self._is_sl_tightening(pos["direction"], float(l2_live.sl or 0.0), be_p))
+                                    else True
+                                )
                                 if ok1 or ok2:
                                     pos["be_moved"] = True
                                     pos["be_pending"] = False
@@ -682,7 +705,7 @@ class MegalordDaemon:
                         # Aşama 2: Fiyat +1.50R'a ulaştıysa Stopu +0.75R'a taşı
                         if fav_dist >= (r_dist * 1.50) and pos.get("trailing_level", 0.0) < 0.75:
                             trail_sl = round(pos["entry_price"] + (r_dist * 0.75), 5) if pos["direction"] == "LONG" else round(pos["entry_price"] - (r_dist * 0.75), 5)
-                            if trail_sl > 0 and l2_live:
+                            if trail_sl > 0 and l2_live and self._is_sl_tightening(pos["direction"], float(l2_live.sl or 0.0), trail_sl):
                                 mod_trail = self.mt5_executor.modify_position_sl(l2_tick, pos["symbol"], trail_sl, pos.get("leg2_tp", 0.0))
                                 if mod_trail:
                                     pos["trailing_level"] = 0.75
@@ -695,7 +718,7 @@ class MegalordDaemon:
                         # Aşama 3: Fiyat +2.20R'a ulaştıysa Stopu +1.40R'a taşı
                         if fav_dist >= (r_dist * 2.20) and pos.get("trailing_level", 0.0) < 1.40:
                             trail_sl2 = round(pos["entry_price"] + (r_dist * 1.40), 5) if pos["direction"] == "LONG" else round(pos["entry_price"] - (r_dist * 1.40), 5)
-                            if trail_sl2 > 0 and l2_live:
+                            if trail_sl2 > 0 and l2_live and self._is_sl_tightening(pos["direction"], float(l2_live.sl or 0.0), trail_sl2):
                                 mod_trail2 = self.mt5_executor.modify_position_sl(l2_tick, pos["symbol"], trail_sl2, pos.get("leg2_tp", 0.0))
                                 if mod_trail2:
                                     pos["trailing_level"] = 1.40
