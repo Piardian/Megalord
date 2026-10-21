@@ -57,8 +57,19 @@ class MegalordSignalArbiter:
         candidate: TradeSignal,
         active_positions: List[Dict[str, Any]],
         macro_htf_bias: Optional[str] = None,
+        allow_historical: bool = False,
     ) -> ArbiterDecision:
         engine = candidate.engine_name
+
+        # Historical closed records must never enter the live execution path.
+        # The simulator opts in explicitly to preserve legacy outcome replay.
+        if candidate.exit_time is not None and not allow_historical:
+            return ArbiterDecision(
+                allowed=False,
+                final_risk_mult=0.0,
+                action="QUALITY_NOT_AN_ENTRY",
+                reason="Completed historical trade record cannot be executed as a new entry.",
+            )
 
         # 0. Execution eligibility before running signal-quality checks.
         if not self.engine_execution_enabled.get(engine, True):
@@ -86,7 +97,7 @@ class MegalordSignalArbiter:
             )
 
         # 1. Quality filter is a veto layer; it does not modify engine entry logic.
-        quality = self.quality_filter.evaluate(candidate)
+        quality = self.quality_filter.evaluate(candidate, allow_historical=allow_historical)
         if not quality.allowed:
             return ArbiterDecision(
                 allowed=False,
