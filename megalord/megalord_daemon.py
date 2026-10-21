@@ -97,7 +97,11 @@ class MegalordDaemon:
         self.firewall = MegalordRiskFirewall(self.config)
         self.news_guard = MegalordNewsGuard()
         self.notifier = notifier or MegalordTelegramNotifier(config=self.config)
-        self.mt5_executor = MegalordMT5Executor(target_account=self.config.get("target_account", 26735345))
+        risk_cfg = self.config.get("risk_sizing", {})
+        self.mt5_executor = MegalordMT5Executor(
+            target_account=self.config.get("target_account", 26735345),
+            base_risk_pct=float(risk_cfg.get("base_risk_pct", 0.50)),
+        )
         self.stream_loader = ProjectStreamLoader()
         self.state = self._load_state()
 
@@ -227,11 +231,36 @@ class MegalordDaemon:
                 continue
 
         for candidate in new_signals:
+            macro_bias = macro_gates.get(norm_symbol(candidate.symbol))
+
+            # Live quality checks require a fresh broker quote. On a transient
+            # quote/account failure, leave the signal unprocessed so it can retry.
+            if self.mode == "mt5_live" and candidate.exit_time is None:
+                candidate.metadata = dict(candidate.metadata or {})
+                candidate.metadata["quality_context"] = "live"
+                if macro_bias:
+                    candidate.metadata["htf_bias"] = macro_bias
+                market_context = self.mt5_executor.get_market_quality_context(
+                    candidate.symbol, candidate.direction
+                )
+                if market_context is None:
+                    cycle_results["blocked"] += 1
+                    cycle_results["actions"].append({
+                        "signal_id": candidate.signal_id,
+                        "engine": candidate.engine_name,
+                        "symbol": candidate.symbol,
+                        "status": "QUALITY_MARKET_CONTEXT_MISSING",
+                        "action": "QUALITY_MARKET_CONTEXT_MISSING",
+                        "reason": "Fresh MT5 quote/account context unavailable; signal left unprocessed for retry.",
+                    })
+                    continue
+                candidate.metadata.update(market_context)
+
             # 1. Evaluate candidate through Arbiter (Confluence, Clone, MR vs Trend, Compass-only)
             decision: ArbiterDecision = self.arbiter.evaluate_signal(
                 candidate=candidate,
                 active_positions=open_positions,
-                macro_htf_bias=macro_gates.get(norm_symbol(candidate.symbol)),
+                macro_htf_bias=macro_bias,
             )
 
             # Record candidate as processed
