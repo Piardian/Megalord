@@ -58,13 +58,17 @@ class SignalQualityFilter:
         except Exception:
             return None
 
-    def evaluate(self, signal: TradeSignal, *, now_utc: Any = None) -> SignalQualityResult:
+    def evaluate(self, signal: TradeSignal, *, now_utc: Any = None, allow_historical: bool = False) -> SignalQualityResult:
         if not self.enabled:
             return SignalQualityResult(True, 100, "QUALITY_FILTER_DISABLED", "Signal quality filter is disabled.")
 
-        # Completed trades are outcome observations, not prospective entry candidates.
+        # Completed trades are outcome observations, not live entry candidates.
+        # Backtests may explicitly opt into bypassing entry-only checks because legacy
+        # historical records often do not retain entry/SL/TP prices.
         if signal.exit_time is not None:
-            return SignalQualityResult(True, 100, "HISTORICAL_TRADE_BYPASS", "Completed historical trade bypasses entry-only quality checks.")
+            if allow_historical:
+                return SignalQualityResult(True, 100, "HISTORICAL_TRADE_BYPASS", "Historical simulation explicitly bypassed entry-only quality checks.")
+            return SignalQualityResult(False, 0, "QUALITY_NOT_AN_ENTRY", "Completed trade record cannot be executed as a new entry.")
 
         metrics: Dict[str, Any] = {}
         score = 100
