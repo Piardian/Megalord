@@ -425,7 +425,7 @@ class MegalordMT5Executor:
                     continue
                 if int(getattr(pos, "type", -1)) != int(expected_type):
                     continue
-                if abs(float(getattr(pos, "volume", 0.0)) - float(volume)) > tolerance:
+                if float(getattr(pos, "volume", 0.0)) + tolerance < float(volume):
                     continue
                 candidates.append(pos)
             except (TypeError, ValueError):
