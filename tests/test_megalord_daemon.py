@@ -74,9 +74,11 @@ def test_daemon_single_cycle_execution(local_tmp_dir):
         strategy_regime=StrategyRegime.TREND_MOMENTUM,
         symbol="EURUSD",
         direction="LONG",
-        entry_time=pd.Timestamp("2026-03-01 10:00:00", tz="UTC"),
-        exit_time=pd.Timestamp("2026-03-01 12:00:00", tz="UTC"),
-        raw_r_result=1.0,
+        entry_time=pd.Timestamp.now(tz="UTC"),
+        exit_time=None,
+        entry_price=1.1000,
+        sl_price=1.0950,
+        tp2_price=1.1100,
     )
     sig_compass = TradeSignal(
         signal_id="MOCK_02",
