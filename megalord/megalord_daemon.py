@@ -165,7 +165,7 @@ class MegalordDaemon:
             return
         try:
             import MetaTrader5 as mt5
-            if not self.mt5_executor._connect_and_verify():
+            if not self.mt5_executor.ensure_connected():
                 return
             mt5_positions = mt5.positions_get()
             if not mt5_positions:
