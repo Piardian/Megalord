@@ -161,7 +161,7 @@ class MegalordMT5Executor:
 
         # Verify the actual normalized volume against broker-calculated loss.
         # Step down if broker P/L rounding makes the risk slightly exceed budget.
-        tolerance = risk_cash * 0.001
+        tolerance = max(1e-8, risk_cash * 1e-9)
         while volume + 1e-12 >= volume_min:
             try:
                 planned_pnl = mt5.order_calc_profit(order_type, symbol, volume, entry, stop)
