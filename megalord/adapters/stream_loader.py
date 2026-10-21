@@ -21,10 +21,11 @@ import pandas as pd
 from megalord.types import TradeSignal, MathFamily, StrategyRegime
 
 # --- ENGINE-SPECIFIC STRICT INSTITUTIONAL WHITELISTS ---
+# Removed chronic negative-expectancy crosses: AUDJPY, CADJPY, EURJPY, EURGBP, EURAUD
 BEGONYA00_WHITELIST: Set[str] = {
     "EURUSD", "GBPUSD", "USDJPY", "USDCAD", "USDCHF", "XAUUSD",
-    "GBPCHF", "EURJPY", "AUDCAD", "AUDJPY", "AUDCHF", "CHFJPY",
-    "CADCHF", "CADJPY", "EURGBP", "EURAUD", "NZDCAD", "NZDUSD", "EURCHF"
+    "GBPCHF", "AUDCAD", "AUDCHF", "CHFJPY",
+    "CADCHF", "NZDCAD", "NZDUSD", "EURCHF"
 }
 PRAGMA_WHITELIST: Set[str] = {"CADCHF", "EURUSD"}
 TRAWMA_WHITELIST: Set[str] = {"NAS100", "BTCUSD"}
@@ -46,6 +47,20 @@ def norm_direction(d: str) -> str:
     if d in ("SHORT", "SELL", "BEAR", "BEARISH", "SAT", "-1"):
         return "SHORT"
     return d
+
+
+def _parse_signal_time(ts_val: Any, assume_local_if_naive: bool = False) -> pd.Timestamp:
+    """Parses signal timestamps safely, converting naive local timestamps (e.g. UTC+3) to UTC."""
+    if ts_val is None or ts_val == "":
+        return pd.Timestamp.now(tz="UTC")
+    ts = pd.Timestamp(ts_val)
+    if ts.tzinfo is not None:
+        return ts.tz_convert("UTC")
+    if assume_local_if_naive:
+        from datetime import datetime
+        local_tz = datetime.now().astimezone().tzinfo
+        return ts.tz_localize(local_tz).tz_convert("UTC")
+    return ts.tz_localize("UTC")
 
 
 class ProjectStreamLoader:
@@ -93,7 +108,9 @@ class ProjectStreamLoader:
                         if sym not in BEGONYA00_WHITELIST:
                             continue
                         t_id = t.get("id") or str(len(signals))
-                        dt_in = pd.to_datetime(t.get("opened_at") or t.get("filled_at") or t.get("entry_candle_time"), utc=True)
+                        raw_ts = t.get("filled_at") or t.get("opened_at") or t.get("entry_candle_time")
+                        is_local_iso = bool(t.get("filled_at") or t.get("opened_at"))
+                        dt_in = _parse_signal_time(raw_ts, assume_local_if_naive=is_local_iso)
                         sig = TradeSignal(
                             signal_id=f"B00_{t_id}",
                             engine_name="Begonya00",
@@ -109,7 +126,13 @@ class ProjectStreamLoader:
                             tp2_price=float(t.get("tp2", 0.0)),
                             raw_r_result=float(t.get("r_result", 0.0)),
                             sub_strategy=t.get("strategy", "M5_SMC_Pullback"),
-                            metadata={"status": t.get("status", "OPEN"), "live_active": True, "rr_ratio": float(t.get("rr_ratio", 3.0))}
+                            metadata={
+                                "status": t.get("status", "OPEN"),
+                                "grade": str(t.get("grade", "A+")),
+                                "pool_type": str(t.get("pool_type", "")),
+                                "live_active": True,
+                                "rr_ratio": float(t.get("rr_ratio", 3.0)),
+                            }
                         )
                         signals.append(sig)
             except Exception as e:
@@ -315,7 +338,12 @@ class ProjectStreamLoader:
                         tp2_price=float(pos.get("tp2", 0.0)),
                         raw_r_result=float(pos.get("realized_r", 0.0)),
                         sub_strategy=f"{pos.get('timeframe', 'M15')}_OrderFlow",
-                        metadata={"status": pos.get("status", "OPEN"), "live_active": is_open, "rr_ratio": 2.0}
+                        metadata={
+                            "status": pos.get("status", "OPEN"),
+                            "live_active": is_open,
+                            "rr_ratio": 2.0,
+                            "price_source": "binance_futures" if str(pos.get("symbol", "")).upper().endswith("USDT") else "mt5",
+                        }
                     )
                     signals.append(sig)
             except Exception as e:

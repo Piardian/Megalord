@@ -153,9 +153,78 @@ class MegalordDaemon:
     def save_state(self) -> None:
         self.state["updated_at"] = datetime.now(timezone.utc).isoformat()
         try:
-            self.state_path.write_text(json.dumps(self.state, indent=2, default=str), encoding="utf-8")
+            tmp_path = self.state_path.with_suffix(".json.tmp")
+            tmp_path.write_text(json.dumps(self.state, indent=2, default=str), encoding="utf-8")
+            os.replace(tmp_path, self.state_path)
         except Exception as exc:
             print(f"[Daemon] Warning: Could not persist state: {exc}")
+
+    def reconcile_mt5_positions(self) -> None:
+        """Synchronizes any untracked live MT5 positions into state['open_positions']."""
+        if self.mode != "mt5_live":
+            return
+        try:
+            import MetaTrader5 as mt5
+            if not self.mt5_executor._connect_and_verify():
+                return
+            mt5_positions = mt5.positions_get()
+            if not mt5_positions:
+                return
+
+            open_positions = self.state.setdefault("open_positions", [])
+            tracked_tickets = set()
+            for pos in open_positions:
+                for key in ("ticket", "leg1_ticket", "leg2_ticket"):
+                    val = pos.get(key)
+                    if val:
+                        tracked_tickets.add(int(val))
+
+            for mp in mt5_positions:
+                t_id = int(mp.ticket)
+                if t_id in tracked_tickets:
+                    continue
+                direction = "LONG" if int(mp.type) == 0 else "SHORT"
+                entry_p = float(mp.price_open or 0.0)
+                sl_p = float(mp.sl or 0.0)
+                tp_p = float(mp.tp or 0.0)
+                r_dist = abs(entry_p - sl_p) if (entry_p > 0 and sl_p > 0) else 0.0
+                synced_record = {
+                    "signal_id": f"MT5_SYNC_{t_id}",
+                    "engine_name": "MT5_Synced",
+                    "math_family": MathFamily.FAMILY_SMC.value,
+                    "strategy_regime": StrategyRegime.MEAN_REVERSION.value,
+                    "symbol": norm_symbol(mp.symbol),
+                    "direction": direction,
+                    "entry_time": datetime.fromtimestamp(int(mp.time), tz=timezone.utc).isoformat(),
+                    "allocated_risk_r": 0.50,
+                    "action": "RECONCILED_LIVE",
+                    "arbiter_reason": "Adopted from live MT5 open positions table",
+                    "confluent_families": [],
+                    "confluent_engines": [],
+                    "status": "OPEN",
+                    "raw_r_result": 0.0,
+                    "ticket": t_id,
+                    "leg1_ticket": t_id,
+                    "leg1_vol": float(mp.volume or 0.0),
+                    "leg1_tp": tp_p,
+                    "leg1_open": True,
+                    "leg1_profit": 0.0,
+                    "leg2_ticket": None,
+                    "leg2_vol": 0.0,
+                    "leg2_tp": 0.0,
+                    "leg2_open": False,
+                    "entry_price": entry_p,
+                    "sl_price": sl_p,
+                    "risk_dist": r_dist,
+                    "be_moved": False,
+                    "be_pending": False,
+                    "trailing_level": 0.0,
+                }
+                open_positions.append(synced_record)
+                tracked_tickets.add(t_id)
+                print(f"[Reconcile] 🔄 MT5 Açık Pozisyon Senkronize Edildi: #{t_id} {mp.symbol} {direction} (SL: {sl_p})")
+        except Exception as exc:
+            print(f"[Reconcile] Warning during MT5 position sync: {exc}")
 
     def fetch_htf_macro_gates(self) -> Dict[str, str]:
         """Reads Begonya shared macro bias gates and Convexity D1 trend direction."""
@@ -190,6 +259,17 @@ class MegalordDaemon:
         new_signals = [s for s in all_signals if s.signal_id not in processed_set]
         return new_signals
 
+    def _compute_be_price(self, pos: Dict[str, Any], default_entry: float = 0.0) -> float:
+        """Computes Break-Even price with a +0.05R commission/spread buffer."""
+        entry_p = float(pos.get("entry_price") or default_entry or 0.0)
+        if entry_p <= 0:
+            return 0.0
+        r_dist = float(pos.get("risk_dist") or 0.0)
+        buffer_dist = r_dist * 0.05 if r_dist > 0 else 0.0
+        direction = pos.get("direction", "LONG")
+        be_raw = (entry_p + buffer_dist) if direction == "LONG" else (entry_p - buffer_dist)
+        return round(be_raw, 5)
+
     def execute_cycle(self) -> Dict[str, Any]:
         """Runs a single orchestration cycle."""
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -197,6 +277,9 @@ class MegalordDaemon:
             self.state["current_date_utc"] = today
             self.state["daily_realized_loss_r"] = 0.0
             self.state["daily_realized_pnl_r"] = 0.0
+
+        if self.mode == "mt5_live":
+            self.reconcile_mt5_positions()
 
         macro_gates = self.fetch_htf_macro_gates()
         new_signals = self.poll_new_incoming_signals()
@@ -256,6 +339,21 @@ class MegalordDaemon:
                     continue
                 candidate.metadata.update(market_context)
 
+                # Trawma Binance Futures -> MT5 Spot/CFD Basis Normalization
+                if candidate.metadata.get("price_source") == "binance_futures" and candidate.entry_price > 0:
+                    live_quote = float(market_context.get("current_price") or 0.0)
+                    sig_age = (datetime.now(timezone.utc) - candidate.entry_time).total_seconds()
+                    if live_quote > 0 and -5.0 <= sig_age <= 180.0:
+                        basis_shift = live_quote - float(candidate.entry_price)
+                        candidate.entry_price = round(float(candidate.entry_price) + basis_shift, 5)
+                        if candidate.sl_price > 0:
+                            candidate.sl_price = round(float(candidate.sl_price) + basis_shift, 5)
+                        if candidate.tp1_price > 0:
+                            candidate.tp1_price = round(float(candidate.tp1_price) + basis_shift, 5)
+                        if candidate.tp2_price > 0:
+                            candidate.tp2_price = round(float(candidate.tp2_price) + basis_shift, 5)
+                        candidate.metadata["basis_shift_applied"] = round(basis_shift, 5)
+
             # 1. Evaluate candidate through Arbiter (Confluence, Clone, MR vs Trend, Compass-only)
             decision: ArbiterDecision = self.arbiter.evaluate_signal(
                 candidate=candidate,
@@ -263,8 +361,15 @@ class MegalordDaemon:
                 macro_htf_bias=macro_bias,
             )
 
-            # Record candidate as processed
-            self.state.setdefault("processed_signal_ids", []).append(candidate.signal_id)
+            # Do NOT permanently burn PENDING_LIMIT signals when waiting for price to pull back into entry box
+            sig_status = str((candidate.metadata or {}).get("status", "")).upper()
+            is_waiting_pullback = (
+                not decision.allowed
+                and decision.action == "QUALITY_ENTRY_DRIFT"
+                and sig_status == "PENDING_LIMIT"
+            )
+            if not is_waiting_pullback:
+                self.state.setdefault("processed_signal_ids", []).append(candidate.signal_id)
 
             if not decision.allowed:
                 if decision.action == "HTF_CONFLICT_VETO":
@@ -275,7 +380,7 @@ class MegalordDaemon:
                     "signal_id": candidate.signal_id,
                     "engine": candidate.engine_name,
                     "symbol": candidate.symbol,
-                    "status": "REJECTED_BY_ARBITER",
+                    "status": "WAITING_LIMIT_PULLBACK" if is_waiting_pullback else "REJECTED_BY_ARBITER",
                     "action": decision.action,
                     "reason": decision.reason,
                 })
@@ -318,7 +423,7 @@ class MegalordDaemon:
                 })
                 continue
 
-            # 3. Approved Trade Execution (Shadow / MT5 Live)
+            # 4. Approved Trade Execution (Shadow / MT5 Live)
             if decision.action == "CONFLUENCE_BOOST":
                 self.state["performance_summary"]["confluence_boosts_count"] += 1
                 cycle_results["confluences"] += 1
@@ -331,7 +436,8 @@ class MegalordDaemon:
             if self.mode == "mt5_live":
                 now_utc = datetime.now(timezone.utc)
                 sig_age_sec = (now_utc - candidate.entry_time).total_seconds()
-                if sig_age_sec > 900:  # Older than 15 minutes (stale signal)
+                max_age = 14400 if sig_status == "PENDING_LIMIT" else 900
+                if sig_age_sec > max_age:
                     print(f"[Megalord Live] 🛡️ Bayat Sinyal Koruması: {candidate.symbol} {candidate.direction} ({sig_age_sec/60:.1f} dk önce üretilmiş). Canlı piyasa emri iletilmedi.")
                     cycle_results["blocked"] += 1
                     cycle_results["actions"].append({
@@ -357,12 +463,14 @@ class MegalordDaemon:
                 if risk_dist <= 0:
                     risk_dist = 0.0020 if "JPY" not in candidate.symbol else 0.20
 
-                # TP1 Safeguard: Reward from live entry must be at least 0.80R. If signal TP1 is collapsed due to drift, dynamically set TP1 = 1.0R from live price
+                # TP1 Safeguard: Ensure TP1 is at least 0.80R from live entry, and cap Begonya00 TP1 at 1.0R
+                # so partial profit + Break-Even lock triggers reliably before mean-reversion snapback.
                 tp1_val = candidate.tp1_price
                 min_tp1_dist = risk_dist * 0.80
+                max_tp1_dist = risk_dist * 1.05 if candidate.engine_name == "Begonya00" else risk_dist * 2.0
                 live_tp1_dist = abs(tp1_val - live_p) if tp1_val > 0 else 0.0
 
-                if tp1_val <= 0 or live_tp1_dist < min_tp1_dist:
+                if tp1_val <= 0 or live_tp1_dist < min_tp1_dist or live_tp1_dist > max_tp1_dist:
                     tp1_val = round((live_p + risk_dist * 1.0) if candidate.direction == "LONG" else (live_p - risk_dist * 1.0), 5)
 
                 # TP2 Safeguard: Runner target must be at least 1.50R from live entry
@@ -371,7 +479,7 @@ class MegalordDaemon:
                 live_tp2_dist = abs(tp2_val - live_p) if tp2_val > 0 else 0.0
 
                 if tp2_val <= 0 or live_tp2_dist < min_tp2_dist:
-                    tp2_val = round((live_p + risk_dist * 3.0) if candidate.direction == "LONG" else (live_p - risk_dist * 3.0), 5)
+                    tp2_val = round((live_p + risk_dist * 2.5) if candidate.direction == "LONG" else (live_p - risk_dist * 2.5), 5)
 
                 # İkiz Emir (Twin Orders) Mimarisi: %50 TP1 Kâr Kilidi, %50 TP2 Runner
                 live_res = self.mt5_executor.place_twin_market_orders(
@@ -421,6 +529,7 @@ class MegalordDaemon:
                 "leg1_vol": live_res.get("leg1_vol", 0.0) if live_res else 0.0,
                 "leg1_tp": tp1_val if self.mode == "mt5_live" else candidate.tp1_price,
                 "leg1_open": bool(live_res.get("leg1_ticket")) if live_res else True,
+                "leg1_profit": 0.0,
                 "leg2_ticket": live_res.get("leg2_ticket") if live_res else None,
                 "leg2_vol": live_res.get("leg2_vol", 0.0) if live_res else 0.0,
                 "leg2_tp": tp2_val if self.mode == "mt5_live" else candidate.tp2_price,
@@ -429,6 +538,7 @@ class MegalordDaemon:
                 "sl_price": sl_val if self.mode == "mt5_live" else candidate.sl_price,
                 "risk_dist": risk_dist if self.mode == "mt5_live" else abs(candidate.entry_price - candidate.sl_price),
                 "be_moved": False,
+                "be_pending": False,
                 "trailing_level": 0.0,
             }
             open_positions.append(pos_record)
@@ -449,10 +559,12 @@ class MegalordDaemon:
             self._dispatch_alert(candidate, decision, allocated_risk_r, ticket=live_ticket, twin_info=live_res)
 
         # Position Lifecycle Management: Check open positions for TP1, TP2, SL, BE exits
-        # MetaTrader5 is required only for live lifecycle management; shadow-mode tests
-        # and simulations must not depend on the Windows-only terminal package.
         if self.mode == "mt5_live":
             import MetaTrader5 as mt5
+            one_r_cash = self.mt5_executor.get_one_r_cash()
+        else:
+            one_r_cash = 49.30
+
         active_open_positions = []
         for pos in open_positions:
             is_closed = False
@@ -468,7 +580,7 @@ class MegalordDaemon:
                 if l1_tick:
                     l1_chk = self.mt5_executor.get_open_position(l1_tick)
                     if l1_chk is not None and not (float(getattr(l1_chk, "sl", 0.0) or 0.0) > 0):
-                        exp_sl = float(pos.get("sl_price", 0.0))
+                        exp_sl = self._compute_be_price(pos, float(l1_chk.price_open or 0.0)) if pos.get("be_moved") else float(pos.get("sl_price", 0.0))
                         if exp_sl > 0:
                             print(f"[SL Watchdog] 🚨 ACİL: Leg 1 #{l1_tick} ({pos['symbol']}) stopsuz tespit edildi! Stop {exp_sl} seviyesine geri yükleniyor...")
                             self.mt5_executor.modify_position_sl(l1_tick, pos["symbol"], exp_sl, pos.get("leg1_tp", 0.0))
@@ -476,8 +588,7 @@ class MegalordDaemon:
                 if l2_tick:
                     l2_chk = self.mt5_executor.get_open_position(l2_tick)
                     if l2_chk is not None and not (float(getattr(l2_chk, "sl", 0.0) or 0.0) > 0):
-                        exp_sl = pos.get("entry_price") if pos.get("be_moved") else pos.get("sl_price")
-                        exp_sl = float(exp_sl or 0.0)
+                        exp_sl = self._compute_be_price(pos, float(l2_chk.price_open or 0.0)) if pos.get("be_moved") else float(pos.get("sl_price", 0.0))
                         if exp_sl > 0:
                             print(f"[SL Watchdog] 🚨 ACİL: Leg 2 #{l2_tick} ({pos['symbol']}) stopsuz tespit edildi! Stop {exp_sl} seviyesine geri yükleniyor...")
                             self.mt5_executor.modify_position_sl(l2_tick, pos["symbol"], exp_sl, pos.get("leg2_tp", 0.0))
@@ -489,14 +600,15 @@ class MegalordDaemon:
                         # Bacak 1 MT5'te kapandı!
                         pos["leg1_open"] = False
                         deal1 = self.mt5_executor.get_position_close_deal(l1_tick)
-                        profit1 = deal1.get("profit", 0.0) if deal1 else 0.0
+                        profit1 = float(deal1.get("profit", 0.0)) if deal1 else 0.0
+                        pos["leg1_profit"] = profit1
                         d_comm1 = deal1.get("comment", "") if deal1 else ""
-                        print(f"[Lifecycle] 🎯 Bacak 1 Kapandı: #{l1_tick} Kâr: ${profit1:.2f} ({d_comm1})")
+                        print(f"[Lifecycle] 🎯 Bacak 1 Kapandı: #{l1_tick} Net Kâr: ${profit1:.2f} ({d_comm1})")
 
                         if not l2_tick:
                             # Tek bacaklı emir (Single Order) doğrudan kapandı!
                             is_closed = True
-                            net_pnl_r = round(profit1 / 49.30, 2)
+                            net_pnl_r = round(profit1 / one_r_cash, 2)
                             if profit1 > 0 or "[tp" in d_comm1.lower():
                                 close_reason = "TP1_HIT"
                                 badge = "🏆 <b>TEK EMİR HEDEFLE KAPANDI (TP)</b>"
@@ -511,64 +623,96 @@ class MegalordDaemon:
                                 f"{badge}\n"
                                 f"━━━━━━━━━━━━━━━━━━━━\n"
                                 f"🎯 <b>Sembol:</b> <code>{pos['symbol']}</code>\n"
-                                f"💰 <b>Realize Kâr/Zarar:</b> <b>${profit1:.2f}</b> ({net_pnl_r:+.2f}R)\n"
+                                f"💰 <b>Realize Net Kâr/Zarar:</b> <b>${profit1:.2f}</b> ({net_pnl_r:+.2f}R)\n"
                                 f"🏁 <b>Kapanış Nedeni:</b> <code>{close_reason}</code>"
                             )
                         elif profit1 > 0 or "[tp" in d_comm1.lower():
+                            pos["be_pending"] = True
                             self.notifier.send_alert(
                                 f"🎯 <b>MEGALORD — %50 TP1 ALINDI!</b>\n"
                                 f"━━━━━━━━━━━━━━━━━━━━\n"
                                 f"🎯 <b>Sembol:</b> <code>{pos['symbol']}</code> ({pos['direction']})\n"
-                                f"💰 <b>Realize Kâr:</b> <b>+${profit1:.2f}</b> (%50 Parça)\n"
-                                f"🛡️ <b>Aksiyon:</b> Kalan %50 Bacak için Stop Giriş Fiyatına (Break-Even) taşınıyor..."
+                                f"💰 <b>Realize Net Kâr:</b> <b>+${profit1:.2f}</b> (%50 Parça)\n"
+                                f"🛡️ <b>Aksiyon:</b> Kalan %50 Bacak için Stop Giriş+Komisyon (Break-Even) seviyesine taşınıyor..."
                             )
-                            # Bacak 2'yi Giriş Fiyatına (Break-Even) çek
-                            if l2_tick and not pos.get("be_moved"):
-                                be_p = pos.get("entry_price", 0.0)
-                                if not be_p or be_p <= 0:
-                                    l2_open_p = self.mt5_executor.get_open_position(l2_tick)
-                                    if l2_open_p and l2_open_p.price_open > 0:
-                                        be_p = float(l2_open_p.price_open)
-                                        pos["entry_price"] = be_p
-                                if be_p and be_p > 0:
-                                    mod_ok = self.mt5_executor.modify_position_sl(l2_tick, pos["symbol"], be_p, pos.get("leg2_tp", 0.0))
-                                if mod_ok:
+
+                # Bağımsız Break-Even Retry Döngüsü: Bacak 1 TP olduktan sonra Bacak 2'nin BE'ye çekilmesi
+                # ilk denemede başarısız olsa bile her döngüde tekrar dener!
+                if l2_tick and not pos.get("be_moved") and (pos.get("be_pending") or not pos.get("leg1_open", True)) and float(pos.get("leg1_profit", 0.0)) > 0:
+                    l2_open_p = self.mt5_executor.get_open_position(l2_tick)
+                    if l2_open_p is not None:
+                        if pos.get("entry_price", 0.0) <= 0 and l2_open_p.price_open > 0:
+                            pos["entry_price"] = float(l2_open_p.price_open)
+                        be_p = self._compute_be_price(pos, float(l2_open_p.price_open or 0.0))
+                        if be_p > 0:
+                            mod_ok = self.mt5_executor.modify_position_sl(l2_tick, pos["symbol"], be_p, pos.get("leg2_tp", 0.0))
+                            if mod_ok:
+                                pos["be_moved"] = True
+                                pos["be_pending"] = False
+                                self.notifier.send_alert(
+                                    f"🛡️ <b>BREAK-EVEN AKTİF (SIFIR RİSK):</b>\n"
+                                    f"Kalan Bacak (#{l2_tick}) Stopu <code>{be_p}</code> (+0.05R BE) seviyesine kilitlendi!\n"
+                                    f"🎯 <b>Hedef:</b> TP2 (<code>{pos.get('leg2_tp')}</code>)"
+                                )
+
+                # Proaktif +0.80R Erken Koruma & Kademeli İz Süren Stop (+1.50R -> +0.75R, +2.20R -> +1.40R)
+                l1_live = self.mt5_executor.get_open_position(l1_tick) if (l1_tick and pos.get("leg1_open", True)) else None
+                l2_live = self.mt5_executor.get_open_position(l2_tick) if l2_tick else None
+                ref_pos = l2_live or l1_live
+                if ref_pos is not None:
+                    if pos.get("entry_price", 0.0) <= 0 and ref_pos.price_open > 0:
+                        pos["entry_price"] = float(ref_pos.price_open)
+                    tick_live = mt5.symbol_info_tick(pos["symbol"])
+                    if tick_live and pos.get("risk_dist", 0.0) > 0 and pos.get("entry_price", 0.0) > 0:
+                        cur_p = tick_live.bid if pos["direction"] == "LONG" else tick_live.ask
+                        fav_dist = (cur_p - pos["entry_price"]) if pos["direction"] == "LONG" else (pos["entry_price"] - cur_p)
+                        r_dist = float(pos["risk_dist"])
+
+                        # Aşama 1: Fiyat +0.80R'a ulaştıysa tüm açık bacakları Break-Even (+0.05R) seviyesine koru
+                        if fav_dist >= (r_dist * 0.80) and not pos.get("be_moved"):
+                            be_p = self._compute_be_price(pos)
+                            if be_p > 0:
+                                ok1 = self.mt5_executor.modify_position_sl(l1_tick, pos["symbol"], be_p, pos.get("leg1_tp", 0.0)) if l1_live else True
+                                ok2 = self.mt5_executor.modify_position_sl(l2_tick, pos["symbol"], be_p, pos.get("leg2_tp", 0.0)) if l2_live else True
+                                if ok1 or ok2:
                                     pos["be_moved"] = True
-                                    self.notifier.send_alert(
-                                        f"🛡️ <b>BREAK-EVEN AKTİF (SIFIR RİSK):</b>\n"
-                                        f"Kalan Bacak (#{l2_tick}) Stopu <code>{be_p}</code> (Giriş) seviyesine kilitlendi!\n"
-                                        f"🎯 <b>Hedef:</b> TP2 (<code>{pos.get('leg2_tp')}</code>)"
-                                    )
+                                    pos["be_pending"] = False
+                                    print(f"[Lifecycle] 🛡️ +0.80R Erken Koruma Aktif: {pos['symbol']} Stop -> {be_p}")
 
-                # Bacak 2 Kontrolü (TP2 / Runner & İz Süren Stop)
-                if l2_tick:
-                    l2_pos = self.mt5_executor.get_open_position(l2_tick)
-                    if l2_pos is not None:
-                        if pos.get("entry_price", 0.0) <= 0 and l2_pos.price_open > 0:
-                            pos["entry_price"] = float(l2_pos.price_open)
-                        # Bacak 2 açık: Fiyat +1.5R'a geldiyse Stopu +0.75R'a taşı (İz Süren Stop)
-                        tick_live = mt5.symbol_info_tick(pos["symbol"])
-                        if tick_live and pos.get("risk_dist", 0.0) > 0 and pos.get("entry_price", 0.0) > 0:
-                            cur_p = tick_live.bid if pos["direction"] == "LONG" else tick_live.ask
-                            fav_dist = (cur_p - pos["entry_price"]) if pos["direction"] == "LONG" else (pos["entry_price"] - cur_p)
-                            r_dist = pos["risk_dist"]
-
-                            if fav_dist >= (r_dist * 1.5) and pos.get("trailing_level", 0.0) < 0.75:
-                                trail_sl = round(pos["entry_price"] + (r_dist * 0.75), 5) if pos["direction"] == "LONG" else round(pos["entry_price"] - (r_dist * 0.75), 5)
-                                if trail_sl > 0:
-                                    mod_trail = self.mt5_executor.modify_position_sl(l2_tick, pos["symbol"], trail_sl, pos.get("leg2_tp", 0.0))
+                        # Aşama 2: Fiyat +1.50R'a ulaştıysa Stopu +0.75R'a taşı
+                        if fav_dist >= (r_dist * 1.50) and pos.get("trailing_level", 0.0) < 0.75:
+                            trail_sl = round(pos["entry_price"] + (r_dist * 0.75), 5) if pos["direction"] == "LONG" else round(pos["entry_price"] - (r_dist * 0.75), 5)
+                            if trail_sl > 0 and l2_live:
+                                mod_trail = self.mt5_executor.modify_position_sl(l2_tick, pos["symbol"], trail_sl, pos.get("leg2_tp", 0.0))
                                 if mod_trail:
                                     pos["trailing_level"] = 0.75
+                                    pos["be_moved"] = True
                                     self.notifier.send_alert(
-                                        f"⚡ <b>İZ SÜREN STOP AKTİF:</b>\n"
-                                        f"Fiyat +1.5R hedefini aştı! Kârı kilitlemek için #{l2_tick} Stopu <code>{trail_sl}</code> (+0.75R) seviyesine kilitlendi."
+                                        f"⚡ <b>İZ SÜREN STOP AKTİF (+0.75R):</b>\n"
+                                        f"Fiyat +1.50R hedefini aştı! Kârı kilitlemek için #{l2_tick} Stopu <code>{trail_sl}</code> (+0.75R) seviyesine kilitlendi."
                                     )
-                    else:
-                        # Bacak 2 kapandı!
+
+                        # Aşama 3: Fiyat +2.20R'a ulaştıysa Stopu +1.40R'a taşı
+                        if fav_dist >= (r_dist * 2.20) and pos.get("trailing_level", 0.0) < 1.40:
+                            trail_sl2 = round(pos["entry_price"] + (r_dist * 1.40), 5) if pos["direction"] == "LONG" else round(pos["entry_price"] - (r_dist * 1.40), 5)
+                            if trail_sl2 > 0 and l2_live:
+                                mod_trail2 = self.mt5_executor.modify_position_sl(l2_tick, pos["symbol"], trail_sl2, pos.get("leg2_tp", 0.0))
+                                if mod_trail2:
+                                    pos["trailing_level"] = 1.40
+                                    self.notifier.send_alert(
+                                        f"🔥 <b>KADEMELİ İZ SÜREN STOP (+1.40R):</b>\n"
+                                        f"Fiyat +2.20R hedefini aştı! #{l2_tick} Stopu <code>{trail_sl2}</code> (+1.40R) seviyesine yükseltildi."
+                                    )
+
+                # Bacak 2 Kapanış Kontrolü
+                if l2_tick and pos.get("leg2_open", True):
+                    l2_pos = self.mt5_executor.get_open_position(l2_tick)
+                    if l2_pos is None:
                         pos["leg2_open"] = False
                         deal2 = self.mt5_executor.get_position_close_deal(l2_tick)
-                        profit2 = deal2.get("profit", 0.0) if deal2 else 0.0
+                        profit2 = float(deal2.get("profit", 0.0)) if deal2 else 0.0
                         d_comm2 = deal2.get("comment", "") if deal2 else ""
+                        total_profit = float(pos.get("leg1_profit", 0.0)) + profit2
 
                         if "[tp" in d_comm2.lower() or profit2 > 0:
                             close_reason = "TP2_HIT"
@@ -584,12 +728,12 @@ class MegalordDaemon:
                             badge = "🔴 <b>STOP LOSS TETİKLENDİ</b>"
 
                         is_closed = True
-                        net_pnl_r = round(profit2 / 49.30, 2)
+                        net_pnl_r = round(total_profit / one_r_cash, 2)
                         self.notifier.send_alert(
                             f"{badge}\n"
                             f"━━━━━━━━━━━━━━━━━━━━\n"
                             f"🎯 <b>Sembol:</b> <code>{pos['symbol']}</code>\n"
-                            f"💰 <b>Kalan Bacak Realize Kâr/Zarar:</b> <b>${profit2:.2f}</b>\n"
+                            f"💰 <b>Bacak 2 Net:</b> <b>${profit2:.2f}</b> | <b>Toplam Net:</b> <b>${total_profit:.2f}</b> ({net_pnl_r:+.2f}R)\n"
                             f"🏁 <b>Kapanış Nedeni:</b> <code>{close_reason}</code>"
                         )
 
@@ -630,6 +774,9 @@ class MegalordDaemon:
                         pass
 
             if is_closed:
+                # Update Arbiter loss-streak tracker
+                self.arbiter.record_trade_outcome(pos.get("engine_name", "Unknown"), net_pnl_r)
+
                 # Update Performance Summary and Counters
                 perf = self.state["performance_summary"]
                 perf["total_trades"] += 1
@@ -734,7 +881,7 @@ class MegalordDaemon:
             f"🎯 <b>Sembol:</b> <code>{pos.get('symbol')}</code> ({pos.get('direction')})\n"
             f"⚙️ <b>Motor:</b> <code>{pos.get('engine_name')}</code>\n"
             f"📌 <b>Kapanış Nedeni:</b> <code>{reason}</code>\n"
-            f"{icon} <b>Net Kâr/Zarar (Komisyon Düşülmüş):</b> <b>{net_r:+.2f} R</b>\n"
+            f"{icon} <b>Net Kâr/Zarar (Komisyon/Swap Dahil):</b> <b>{net_r:+.2f} R</b>\n"
             f"━━━━━━━━━━━━━━━━━━━━\n"
             f"📈 <b>CANLI SKOR & SAYAÇLAR:</b>\n"
             f"• Toplam İşlem: <b>{total}</b> | Kazanma Oranı: <b>%{wr}</b>\n"
@@ -750,7 +897,10 @@ class MegalordDaemon:
         """Prints high-visibility executive command center status."""
         perf = self.state.get("performance_summary", {})
         open_pos = self.state.get("open_positions", [])
-        total_open_risk = sum(p.get("allocated_risk_r", 1.0) for p in open_pos)
+        total_open_risk = sum(
+            0.0 if (p.get("be_moved") or float(p.get("trailing_level", 0.0)) > 0) else p.get("allocated_risk_r", 1.0)
+            for p in open_pos
+        )
 
         print("\n" + "=" * 80)
         print(f"👑 MEGALORD META-ALLOCATOR & ORCHESTRATOR COMMAND CENTER [Mode: {self.mode.upper()}]")
@@ -771,7 +921,8 @@ class MegalordDaemon:
             print("AÇIK POZİSYONLAR:")
             for p in open_pos[-5:]:
                 dir_icon = "LONG " if p["direction"] == "LONG" else "SHORT"
-                print(f"  [{p['engine_name']:<16}] {p['symbol']:<10} {dir_icon} | Risk: {p['allocated_risk_r']:.2f}R | {p['action']}")
+                be_tag = " [BE/TRAIL KORUMALI]" if (p.get("be_moved") or float(p.get("trailing_level", 0.0)) > 0) else ""
+                print(f"  [{p['engine_name']:<16}] {p['symbol']:<10} {dir_icon} | Risk: {p['allocated_risk_r']:.2f}R | {p['action']}{be_tag}")
         else:
             print("Açık pozisyon bulunmuyor (Tüm limitler güvende).")
         print("=" * 80 + "\n")

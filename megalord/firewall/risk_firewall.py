@@ -66,7 +66,11 @@ class MegalordRiskFirewall:
 
         for pos in open_positions:
             pos_risk = float(pos.get("allocated_risk_r", pos.get("risk_r", 0.50)))
-            is_be = bool(pos.get("is_breakeven", False) or pos.get("be_moved", False))
+            is_be = bool(
+                pos.get("is_breakeven", False)
+                or pos.get("be_moved", False)
+                or float(pos.get("trailing_level", 0.0) or 0.0) > 0
+            )
             pos_is_convexity = (pos.get("engine_name") == "Convexity_v2")
 
             # Worst-case risk for daily drawdown
@@ -76,6 +80,10 @@ class MegalordRiskFirewall:
             # Faz 3.1: Eğer aday sinyal bir Intraday motoruysa, açık Convexity_v2 pozisyonunun
             # cluster yükü Intraday motorunun döviz tavanını bloke etmez (Starvation Engeli).
             if is_candidate_intraday and pos_is_convexity:
+                continue
+
+            # Risk-free positions (Break-Even / Trailing Stop) carry 0.0R downside risk and do not consume cluster cap
+            if is_be:
                 continue
 
             sym = pos.get("symbol", "")

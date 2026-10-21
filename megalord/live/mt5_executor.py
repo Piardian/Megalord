@@ -608,12 +608,26 @@ class MegalordMT5Executor:
             # MT5 exit deals commonly have entry == 1.
             for deal in reversed(deals):
                 if deal.entry == 1:
+                    gross_p = float(getattr(deal, "profit", 0.0) or 0.0)
+                    comm = float(getattr(deal, "commission", 0.0) or 0.0)
+                    swap = float(getattr(deal, "swap", 0.0) or 0.0)
                     return {
                         "ticket": deal.ticket,
                         "order": deal.order,
-                        "profit": deal.profit,
+                        "profit": gross_p + comm + swap,
+                        "gross_profit": gross_p,
+                        "commission": comm,
+                        "swap": swap,
                         "price": deal.price,
                         "comment": deal.comment,
                         "time": deal.time,
                     }
         return None
+
+    def get_one_r_cash(self) -> float:
+        """Return the current 1.0R cash value based on live account equity and base_risk_pct."""
+        if self.ensure_connected():
+            acc = mt5.account_info()
+            if acc and getattr(acc, "equity", 0.0) > 0:
+                return float(acc.equity) * (self.base_risk_pct / 100.0)
+        return 50.0

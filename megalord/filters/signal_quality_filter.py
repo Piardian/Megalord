@@ -29,8 +29,10 @@ class SignalQualityFilter:
         cfg = config or {}
         self.enabled = bool(cfg.get("enabled", True))
         self.max_signal_age_seconds = float(cfg.get("max_signal_age_seconds", 900))
+        self.max_pending_limit_age_seconds = float(cfg.get("max_pending_limit_age_seconds", 14400))
         self.max_spread_to_sl_ratio = float(cfg.get("max_spread_to_sl_ratio", 0.10))
         self.max_entry_drift_r = float(cfg.get("max_entry_drift_r", 0.25))
+        self.min_tp1_rr = float(cfg.get("min_tp1_rr", 0.60))
         self.min_tp2_rr = float(cfg.get("min_tp2_rr", 1.50))
         self.min_score = int(cfg.get("min_score", 60))
         self.require_sl = bool(cfg.get("require_sl", True))
@@ -92,6 +94,18 @@ class SignalQualityFilter:
                 return SignalQualityResult(False, 0, "QUALITY_INVALID_SL_DISTANCE", "Stop-loss distance is zero or invalid.", metrics)
             metrics["stop_distance"] = stop_dist
 
+            tp1 = getattr(signal, "tp1_price", 0.0)
+            if self._finite_positive(tp1):
+                reward1 = float(tp1) - entry_f if direction == "LONG" else entry_f - float(tp1)
+                if reward1 <= 0:
+                    return SignalQualityResult(False, 0, "QUALITY_INVALID_TP1_SIDE", "TP1 is not on the profit side of entry.", {"tp1_price": float(tp1)})
+                rr1 = reward1 / stop_dist
+                metrics["tp1_rr"] = round(rr1, 4)
+                if rr1 < self.min_tp1_rr:
+                    return SignalQualityResult(False, 0, "QUALITY_LOW_TP1_RR", f"TP1 reward/risk {rr1:.2f} is below minimum {self.min_tp1_rr:.2f}.", metrics)
+            else:
+                metrics["tp1_rr"] = None
+
             tp2 = getattr(signal, "tp2_price", 0.0)
             if self._finite_positive(tp2):
                 reward = float(tp2) - entry_f if direction == "LONG" else entry_f - float(tp2)
@@ -125,10 +139,20 @@ class SignalQualityFilter:
             current_price = metadata.get("current_price")
             if current_price is not None:
                 try:
-                    drift_r = abs(float(current_price) - entry_f) / stop_dist
+                    cur_f = float(current_price)
+                    drift_r = abs(cur_f - entry_f) / stop_dist
                     metrics["entry_drift_r"] = round(drift_r, 4)
                     if not math.isfinite(drift_r) or drift_r > self.max_entry_drift_r:
                         return SignalQualityResult(False, 0, "QUALITY_ENTRY_DRIFT", f"Current price drift {drift_r:.2f}R exceeds {self.max_entry_drift_r:.2f}R.", metrics)
+                    if (direction == "LONG" and stop_f >= cur_f) or (direction == "SHORT" and stop_f <= cur_f):
+                        return SignalQualityResult(False, 0, "QUALITY_INVALID_LIVE_SL_SIDE", "Stop-loss is not on the loss side of current market price.", metrics)
+                    live_stop_dist = abs(cur_f - stop_f)
+                    if self._finite_positive(tp1):
+                        live_rew1 = (float(tp1) - cur_f) if direction == "LONG" else (cur_f - float(tp1))
+                        live_rr1 = live_rew1 / live_stop_dist if live_stop_dist > 0 else 0.0
+                        metrics["live_tp1_rr"] = round(live_rr1, 4)
+                        if live_rr1 < self.min_tp1_rr:
+                            return SignalQualityResult(False, 0, "QUALITY_LOW_LIVE_TP1_RR", f"Live TP1 R:R {live_rr1:.2f} from market price is below minimum {self.min_tp1_rr:.2f}.", metrics)
                 except (TypeError, ValueError):
                     return SignalQualityResult(False, 0, "QUALITY_INVALID_CURRENT_PRICE", "Current-price metadata is invalid.", metrics)
             else:
@@ -137,11 +161,24 @@ class SignalQualityFilter:
         # Signal freshness is enforced for live-origin signals; historical records
         # and backtest events must not be rejected based on today's wall clock.
         metadata = signal.metadata or {}
+        pool_type = str(metadata.get("pool_type", "")).upper()
+        if pool_type in ("ASIAN_HIGH", "ASIAN_LOW"):
+            try:
+                sig_hour = __import__("pandas").Timestamp(signal.entry_time).tz_convert("UTC").hour
+                if sig_hour >= 13:
+                    return SignalQualityResult(False, 0, "QUALITY_STALE_ASIAN_POOL_NY", f"Stale {pool_type} sweep during NY session (hour={sig_hour} UTC) is blocked.", metrics)
+            except Exception:
+                pass
+
         if metadata.get("live_active") or metadata.get("quality_context") == "live":
             age = self._age_seconds(signal) if now_utc is None else self._age_seconds_with_now(signal, now_utc)
+            if age is not None and -5.0 <= age < 0.0:
+                age = 0.0
             metrics["signal_age_seconds"] = None if age is None else round(age, 2)
-            if age is None or age < 0 or age > self.max_signal_age_seconds:
-                return SignalQualityResult(False, 0, "QUALITY_STALE_SIGNAL", f"Live signal age is invalid or exceeds {self.max_signal_age_seconds:.0f}s.", metrics)
+            is_pending_limit = str(metadata.get("status", "")).upper() == "PENDING_LIMIT"
+            max_age = self.max_pending_limit_age_seconds if is_pending_limit else self.max_signal_age_seconds
+            if age is None or age < 0 or age > max_age:
+                return SignalQualityResult(False, 0, "QUALITY_STALE_SIGNAL", f"Live signal age is invalid or exceeds {max_age:.0f}s.", metrics)
 
         htf_bias = str(metadata.get("htf_bias", "")).upper()
         if htf_bias in ("LONG", "SHORT") and htf_bias != direction:

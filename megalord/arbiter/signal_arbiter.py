@@ -41,6 +41,7 @@ class MegalordSignalArbiter:
         self.orthogonal_boost = float(alloc_cfg.get("orthogonal_confluence_multiplier", 1.30))
         self.clone_cap = float(alloc_cfg.get("clone_confluence_cap", 1.0))
         self.mr_counter_trend_mult = float(alloc_cfg.get("counter_trend_mean_reversion_multiplier", 0.50))
+        self.begonya00_aplus_mult = float(alloc_cfg.get("begonya00_aplus_multiplier", 0.80))
         self.cooldown_threshold = int(alloc_cfg.get("consecutive_loss_cooldown_threshold", 3))
         self.cooldown_multiplier = float(alloc_cfg.get("consecutive_loss_cooldown_multiplier", 0.50))
         self.quality_filter = SignalQualityFilter(cfg.get("signal_quality_filter", {}))
@@ -106,7 +107,12 @@ class MegalordSignalArbiter:
                 reason=f"{quality.reason} Metrics={quality.metrics}",
             )
 
-        # 2. Engine loss-streak cooldown.
+        # 2. Grade-aware risk scaling & Engine loss-streak cooldown.
+        meta = candidate.metadata or {}
+        grade_str = str(meta.get("grade", "")).upper()
+        if engine == "Begonya00" and "A+" in grade_str and "AAA" not in grade_str:
+            base_w *= self.begonya00_aplus_mult
+
         streak = self.engine_loss_streaks.get(engine, 0)
         cooldown_applied = streak >= self.cooldown_threshold
         if cooldown_applied:

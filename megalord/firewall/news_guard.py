@@ -25,6 +25,7 @@ class MegalordNewsGuard:
     def __init__(self, config_path: Path | str = DEFAULT_CONFIG_PATH):
         self.config_path = Path(config_path)
         self.config = self._load_config()
+        self._last_refresh_utc: Optional[datetime] = None
 
     def _load_config(self) -> Dict[str, Any]:
         if self.config_path.exists():
@@ -84,6 +85,9 @@ class MegalordNewsGuard:
             }
         """
         now_utc = datetime.now(timezone.utc)
+        if self._last_refresh_utc is None or (now_utc - self._last_refresh_utc).total_seconds() > 21600:
+            self._last_refresh_utc = now_utc
+            self.fetch_live_forexfactory_events()
         events = self.config.get("scheduled_events", [])
         freeze_before = self.config.get("default_freeze_minutes_before", 5)
         freeze_after = self.config.get("default_freeze_minutes_after", 5)
