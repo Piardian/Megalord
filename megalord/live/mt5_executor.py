@@ -1,70 +1,264 @@
-"""Megalord MT5 Live Order Executor for The 5%ers Evaluation Account.
-
-Features:
-- Magic Number: 202699
-- The 5%ers Risk Per Trade: 0.50% base risk (~$49.30) multiplied by Arbiter Risk Multiplier.
-- Exact Lot Size Calculation using MT5 tick value, point size, and contract specifications.
-- Pre-trade slippage and margin checks.
-- Automatic SL and TP placement on broker order execution.
-"""
+"""Fail-closed MT5 execution and risk-based volume sizing."""
 from __future__ import annotations
 
 import logging
+import math
+from decimal import Decimal
 from typing import Dict, Any, Optional
-import MetaTrader5 as mt5
+
+try:
+    import MetaTrader5 as mt5
+except ImportError:  # Allows unit-testing pure sizing decisions off Windows/MT5.
+    mt5 = None  # type: ignore[assignment]
 
 logger = logging.getLogger("Megalord.MT5Executor")
-
 MEGALORD_MAGIC_NUMBER = 202699
 
 
 class MegalordMT5Executor:
     def __init__(self, target_account: int = 26735345, base_risk_pct: float = 0.50):
         self.target_account = target_account
-        self.base_risk_pct = base_risk_pct
+        self.base_risk_pct = float(base_risk_pct)
         self.magic = MEGALORD_MAGIC_NUMBER
 
     def ensure_connected(self) -> bool:
+        if mt5 is None:
+            logger.error("MetaTrader5 package is unavailable; live execution is disabled.")
+            return False
         if not mt5.initialize():
-            logger.error("MT5 initialize failed.")
+            logger.error("MT5 initialize failed: %s", mt5.last_error())
             return False
         acc = mt5.account_info()
         if not acc:
             logger.error("Could not fetch account info from MT5.")
             return False
-        if acc.login != self.target_account:
-            logger.warning(f"Target account mismatch: Expected #{self.target_account}, Found #{acc.login}")
+        if int(acc.login) != int(self.target_account):
+            logger.error("Target account mismatch: expected #%s, found #%s; refusing to trade.", self.target_account, acc.login)
+            return False
+        if not math.isfinite(float(getattr(acc, "equity", 0.0))) or float(acc.equity) <= 0:
+            logger.error("Account equity is unavailable or invalid; refusing to trade.")
+            return False
         return True
 
-    def calculate_lot_size(self, symbol: str, entry_price: float, sl_price: float, risk_mult: float = 1.0) -> float:
-        """Calculates precise MT5 lot volume according to account equity and stop loss distance."""
-        acc = mt5.account_info()
-        if not acc or acc.balance <= 0:
-            return 0.01
+    @staticmethod
+    def _valid_price(value: Any) -> bool:
+        try:
+            x = float(value)
+            return math.isfinite(x) and x > 0
+        except (TypeError, ValueError):
+            return False
 
-        effective_risk_pct = self.base_risk_pct * risk_mult
-        risk_cash = acc.balance * (effective_risk_pct / 100.0)
+    @staticmethod
+    def _volume_digits(step: float) -> int:
+        normalized = Decimal(str(step)).normalize()
+        return max(0, -normalized.as_tuple().exponent)
+
+    @staticmethod
+    def _floor_to_step(volume: float, step: float) -> float:
+        # A small epsilon handles binary floating-point noise without rounding up.
+        units = math.floor((volume / step) + 1e-10)
+        return round(units * step, MegalordMT5Executor._volume_digits(step))
+
+    def calculate_lot_size(self, symbol: str, entry_price: float, sl_price: float, risk_mult: float = 1.0) -> Optional[float]:
+        """Return a broker-valid volume that cannot exceed the configured risk budget.
+
+        None means the trade is not safely sizeable. There is deliberately no
+        default/minimum-lot fallback.
+        """
+        if mt5 is None:
+            logger.error("MT5 package unavailable; cannot calculate verified risk.")
+            return None
+
+        try:
+            entry = float(entry_price)
+            stop = float(sl_price)
+            multiplier = float(risk_mult)
+            base_pct = float(self.base_risk_pct)
+        except (TypeError, ValueError):
+            logger.error("Invalid entry, stop, or risk multiplier for %s.", symbol)
+            return None
+
+        if not math.isfinite(entry) or entry <= 0 or not math.isfinite(stop) or stop <= 0 or entry == stop:
+            logger.error("Invalid entry/SL geometry for %s: entry=%s SL=%s.", symbol, entry_price, sl_price)
+            return None
+        if not math.isfinite(multiplier) or multiplier <= 0 or not math.isfinite(base_pct) or base_pct <= 0:
+            logger.error("Invalid risk percentage/multiplier for %s.", symbol)
+            return None
+
+        acc = mt5.account_info()
+        if not acc:
+            logger.error("Account info unavailable; refusing to size %s.", symbol)
+            return None
+        equity = getattr(acc, "equity", None)
+        if not self._valid_price(equity):
+            logger.error("Account equity missing or invalid; refusing to size %s.", symbol)
+            return None
 
         sym_info = mt5.symbol_info(symbol)
         if not sym_info:
-            logger.warning(f"Symbol info not available for {symbol}, using min lot 0.01")
-            return 0.01
+            logger.error("Symbol metadata unavailable for %s; refusing to size.", symbol)
+            return None
 
-        stop_dist = abs(entry_price - sl_price)
-        if stop_dist <= 0:
-            return sym_info.volume_min
+        tick_size = getattr(sym_info, "trade_tick_size", None)
+        volume_min = getattr(sym_info, "volume_min", None)
+        volume_max = getattr(sym_info, "volume_max", None)
+        volume_step = getattr(sym_info, "volume_step", None)
+        for label, value in (("tick_size", tick_size), ("volume_min", volume_min), ("volume_max", volume_max), ("volume_step", volume_step)):
+            try:
+                valid = math.isfinite(float(value)) and float(value) > 0
+            except (TypeError, ValueError):
+                valid = False
+            if not valid:
+                logger.error("Missing/invalid %s for %s; refusing to size.", label, symbol)
+                return None
+        tick_size = float(tick_size)
+        volume_min = float(volume_min)
+        volume_max = float(volume_max)
+        volume_step = float(volume_step)
+        if volume_max < volume_min or volume_step > volume_max:
+            logger.error("Inconsistent broker volume constraints for %s.", symbol)
+            return None
 
-        tick_size = sym_info.trade_tick_size or sym_info.point or 0.0001
-        tick_val = sym_info.trade_tick_value or 1.0
-        loss_per_lot = (stop_dist / tick_size) * tick_val
+        # Direction-specific MT5 profit calculation uses account-currency P/L and
+        # the broker's contract specification, avoiding assumptions about tick value.
+        if stop < entry:
+            order_type = mt5.ORDER_TYPE_BUY
+        else:
+            order_type = mt5.ORDER_TYPE_SELL
+        try:
+            one_lot_pnl = mt5.order_calc_profit(order_type, symbol, 1.0, entry, stop)
+        except Exception as exc:
+            logger.error("order_calc_profit failed for %s: %s", symbol, exc)
+            return None
+        if one_lot_pnl is None:
+            logger.error("Broker could not calculate stop-loss P/L for %s; refusing to size.", symbol)
+            return None
+        try:
+            loss_per_lot = abs(float(one_lot_pnl))
+        except (TypeError, ValueError):
+            loss_per_lot = 0.0
+        if not math.isfinite(loss_per_lot) or loss_per_lot <= 0:
+            logger.error("Invalid loss-per-lot result for %s: %r.", symbol, one_lot_pnl)
+            return None
 
-        if loss_per_lot <= 0:
-            return sym_info.volume_min
+        risk_cash = float(equity) * (base_pct * multiplier / 100.0)
+        if not math.isfinite(risk_cash) or risk_cash <= 0:
+            logger.error("Calculated risk budget is invalid for %s.", symbol)
+            return None
 
-        raw_lot = risk_cash / loss_per_lot
-        step = sym_info.volume_step or 0.01
-        calculated_lot = round(round(raw_lot / step) * step, 2)
-        return min(sym_info.volume_max, max(sym_info.volume_min, calculated_lot))
+        raw_volume = risk_cash / loss_per_lot
+        if not math.isfinite(raw_volume) or raw_volume <= 0:
+            logger.error("Calculated volume is invalid for %s.", symbol)
+            return None
+        # Always round down. Never round to nearest and never raise to broker minimum.
+        volume = min(volume_max, self._floor_to_step(raw_volume, volume_step))
+        if volume + 1e-12 < volume_min:
+            logger.warning(
+                "Trade rejected for %s: safe volume %.8f is below broker minimum %.8f (risk budget %.2f).",
+                symbol, volume, volume_min, risk_cash,
+            )
+            return None
+
+        # Verify the actual normalized volume against broker-calculated loss.
+        # Step down if broker P/L rounding makes the risk slightly exceed budget.
+        tolerance = max(1e-8, risk_cash * 1e-9)
+        while volume + 1e-12 >= volume_min:
+            try:
+                planned_pnl = mt5.order_calc_profit(order_type, symbol, volume, entry, stop)
+            except Exception:
+                planned_pnl = None
+            if planned_pnl is None:
+                logger.error("Could not verify risk at final volume for %s; refusing to size.", symbol)
+                return None
+            planned_loss = abs(float(planned_pnl))
+            if math.isfinite(planned_loss) and planned_loss <= risk_cash + tolerance:
+                logger.info(
+                    "Risk sizing %s: equity=%.2f budget=%.2f stop_loss=%.2f volume=%.8f",
+                    symbol, float(equity), risk_cash, planned_loss, volume,
+                )
+                return volume
+            volume = self._floor_to_step(volume - volume_step, volume_step)
+
+        logger.warning("No broker-valid volume for %s satisfies the risk budget; trade rejected.", symbol)
+        return None
+
+    def _valid_order_geometry(self, direction: str, entry: float, sl: float, tp: float) -> bool:
+        side = str(direction).upper()
+        if side not in ("LONG", "BUY", "SHORT", "SELL"):
+            logger.error("Unsupported order direction %r.", direction)
+            return False
+        if not self._valid_price(entry) or not self._valid_price(sl) or not self._valid_price(tp):
+            logger.error("Entry, SL, and TP must all be finite positive prices.")
+            return False
+        is_buy = side in ("LONG", "BUY")
+        if is_buy and not (sl < entry < tp):
+            logger.error("Invalid LONG geometry: require SL < entry < TP (SL=%s entry=%s TP=%s).", sl, entry, tp)
+            return False
+        if not is_buy and not (tp < entry < sl):
+            logger.error("Invalid SHORT geometry: require TP < entry < SL (TP=%s entry=%s SL=%s).", tp, entry, sl)
+            return False
+        return True
+
+    def _prepare_symbol_and_tick(self, symbol: str):
+        sym_info = mt5.symbol_info(symbol)
+        if not sym_info:
+            logger.error("Cannot trade symbol %s: broker metadata not found.", symbol)
+            return None, None
+        if not getattr(sym_info, "visible", True):
+            if not mt5.symbol_select(symbol, True):
+                logger.error("Could not select symbol %s in Market Watch.", symbol)
+                return None, None
+            sym_info = mt5.symbol_info(symbol)
+            if not sym_info:
+                return None, None
+        tick = mt5.symbol_info_tick(symbol)
+        if not tick or not self._valid_price(getattr(tick, "bid", None)) or not self._valid_price(getattr(tick, "ask", None)):
+            logger.error("Live bid/ask unavailable for %s.", symbol)
+            return None, None
+        return sym_info, tick
+
+    def get_market_quality_context(self, symbol: str, direction: str) -> Optional[Dict[str, float]]:
+        """Return a fresh broker quote for pre-trade spread and entry-drift checks."""
+        if not self.ensure_connected():
+            return None
+        sym_info, tick = self._prepare_symbol_and_tick(symbol)
+        if not sym_info or not tick:
+            return None
+        side = str(direction).upper()
+        if side not in ("LONG", "BUY", "SHORT", "SELL"):
+            return None
+        bid, ask = float(tick.bid), float(tick.ask)
+        spread = ask - bid
+        point = getattr(sym_info, "point", None)
+        if not math.isfinite(spread) or spread < 0 or not self._valid_price(point):
+            logger.error("Invalid live spread/point for %s.", symbol)
+            return None
+        executable_price = ask if side in ("LONG", "BUY") else bid
+        return {
+            "current_price": executable_price,
+            "spread_price": spread,
+            "spread_points": spread / float(point),
+            "point": float(point),
+        }
+
+    def _check_margin(self, symbol: str, order_type: int, volume: float, price: float) -> bool:
+        acc = mt5.account_info()
+        if not acc:
+            logger.error("Account info unavailable during margin check.")
+            return False
+        try:
+            required = mt5.order_calc_margin(order_type, symbol, volume, price)
+        except Exception as exc:
+            logger.error("Margin calculation failed for %s: %s", symbol, exc)
+            return False
+        if required is None or not math.isfinite(float(required)) or float(required) < 0:
+            logger.error("Margin requirement unavailable for %s.", symbol)
+            return False
+        free_margin = getattr(acc, "margin_free", None)
+        if free_margin is None or not math.isfinite(float(free_margin)) or float(free_margin) < float(required):
+            logger.error("Insufficient or unknown free margin for %s: required=%s free=%s.", symbol, required, free_margin)
+            return False
+        return True
 
     def place_market_order(
         self,
@@ -73,67 +267,33 @@ class MegalordMT5Executor:
         sl_price: float,
         tp_price: float,
         risk_mult: float = 1.0,
-        comment: str = "Megalord_Live"
+        comment: str = "Megalord_Live",
     ) -> Optional[Dict[str, Any]]:
-        """Sends live market execution deal to The 5%ers MT5 server."""
         if not self.ensure_connected():
             return None
-
-        sym_info = mt5.symbol_info(symbol)
-        if not sym_info:
-            logger.error(f"Cannot trade symbol {symbol}: not found on broker.")
+        sym_info, tick = self._prepare_symbol_and_tick(symbol)
+        if not sym_info or not tick:
             return None
-
-        if not sym_info.visible:
-            mt5.symbol_select(symbol, True)
-
-        tick = mt5.symbol_info_tick(symbol)
-        if not tick:
-            logger.error(f"Could not retrieve live price tick for {symbol}")
+        side = str(direction).upper()
+        if side not in ("LONG", "BUY", "SHORT", "SELL"):
+            logger.error("Unsupported order direction %r.", direction)
             return None
-
-        is_buy = direction.upper() in ("LONG", "BUY")
+        is_buy = side in ("LONG", "BUY")
         order_type = mt5.ORDER_TYPE_BUY if is_buy else mt5.ORDER_TYPE_SELL
-        entry_price = tick.ask if is_buy else tick.bid
-
-        lot = self.calculate_lot_size(symbol, entry_price, sl_price, risk_mult)
-
-        req = {
-            "action": mt5.TRADE_ACTION_DEAL,
-            "symbol": symbol,
-            "volume": lot,
-            "type": order_type,
-            "price": entry_price,
-            "sl": float(sl_price) if sl_price > 0 else 0.0,
-            "tp": float(tp_price) if tp_price > 0 else 0.0,
-            "deviation": 20,
-            "magic": self.magic,
-            "comment": comment[:31],
-            "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_IOC,
-        }
-
-        result = mt5.order_send(req)
-        if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
-            # Fallback to FOK filling if IOC rejected
-            req["type_filling"] = mt5.ORDER_FILLING_FOK
-            result = mt5.order_send(req)
-
-        if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
-            err = result.comment if result else mt5.last_error()
-            logger.error(f"MT5 Order Send Failed: {err}")
+        entry_price = float(tick.ask if is_buy else tick.bid)
+        if not self._valid_order_geometry(side, entry_price, sl_price, tp_price):
             return None
-
-        logger.info(f"✅ The 5%ers Live Order Placed! Ticket: #{result.order} | Symbol: {symbol} | Lot: {lot} | Price: {result.price}")
-        return {
-            "ticket": result.order,
-            "deal": result.deal,
-            "volume": lot,
-            "price": result.price,
-            "symbol": symbol,
-            "direction": direction,
-            "comment": comment
-        }
+        lot = self.calculate_lot_size(symbol, entry_price, sl_price, risk_mult)
+        if lot is None:
+            logger.warning("Order rejected before submission: safe lot sizing failed for %s.", symbol)
+            return None
+        if not self._check_margin(symbol, order_type, lot, entry_price):
+            return None
+        res = self._send_single_deal(symbol, order_type, entry_price, lot, float(sl_price), float(tp_price), comment)
+        if not res:
+            return None
+        logger.info("Live order placed: ticket=%s symbol=%s lot=%s price=%s", res["ticket"], symbol, lot, res["price"])
+        return {**res, "symbol": symbol, "direction": direction, "comment": comment}
 
     def place_twin_market_orders(
         self,
@@ -143,121 +303,136 @@ class MegalordMT5Executor:
         tp1_price: float,
         tp2_price: float,
         risk_mult: float = 1.0,
-        comment: str = "MGL"
+        comment: str = "MGL",
     ) -> Optional[Dict[str, Any]]:
-        """
-        İkiz Emir (Twin Orders) Mimarisi:
-        Hesaplanan toplam lotu 2 eşit parçaya böler (%50 / %50).
-        - Bacak 1 (Leg 1): TP1 (1.0R - 1.9R) seviyesine bağlanır (%50 Kâr Kilidi).
-        - Bacak 2 (Leg 2): TP2 (2.0R - 3.5R+) ana likidite hedefine bağlanır (Runner).
-        """
+        """Place two risk-budgeted legs when both can meet broker minimum volume."""
         if not self.ensure_connected():
             return None
-
-        sym_info = mt5.symbol_info(symbol)
-        if not sym_info:
-            logger.error(f"Cannot trade symbol {symbol}: not found on broker.")
+        sym_info, tick = self._prepare_symbol_and_tick(symbol)
+        if not sym_info or not tick:
             return None
-
-        if not sym_info.visible:
-            mt5.symbol_select(symbol, True)
-
-        tick = mt5.symbol_info_tick(symbol)
-        if not tick:
-            logger.error(f"Could not retrieve live price tick for {symbol}")
+        side = str(direction).upper()
+        if side not in ("LONG", "BUY", "SHORT", "SELL"):
+            logger.error("Unsupported order direction %r.", direction)
             return None
-
-        is_buy = direction.upper() in ("LONG", "BUY")
+        is_buy = side in ("LONG", "BUY")
         order_type = mt5.ORDER_TYPE_BUY if is_buy else mt5.ORDER_TYPE_SELL
-        entry_price = tick.ask if is_buy else tick.bid
+        entry_price = float(tick.ask if is_buy else tick.bid)
+        if not self._valid_order_geometry(side, entry_price, sl_price, tp2_price):
+            return None
+        if not self._valid_order_geometry(side, entry_price, sl_price, tp1_price):
+            logger.error("Twin order rejected: TP1 geometry is invalid.")
+            return None
 
         total_lot = self.calculate_lot_size(symbol, entry_price, sl_price, risk_mult)
-        step = sym_info.volume_step or 0.01
-        min_lot = sym_info.volume_min or 0.01
-
-        if total_lot <= min_lot:
-            # Minumum lottan küçük veya eşitse bölünemez, tek emir olarak TP2 hedefine aç
-            res = self.place_market_order(symbol, direction, sl_price, tp2_price, risk_mult, comment=f"{comment}_SINGLE")
-            if not res:
-                return None
-            return {
-                "leg1_ticket": res["ticket"],
-                "leg1_vol": total_lot,
-                "leg1_tp": tp1_price,
-                "leg2_ticket": None,
-                "leg2_vol": 0.0,
-                "leg2_tp": tp2_price,
-                "entry_price": res["price"],
-                "sl_price": sl_price,
-                "total_lot": total_lot,
-                "is_split": False
-            }
-
-        # İki eşit parçaya böl
-        raw_half = total_lot / 2.0
-        leg1_lot = round(round(raw_half / step) * step, 2)
-        leg1_lot = max(min_lot, leg1_lot)
-        leg2_lot = round(total_lot - leg1_lot, 2)
-
-        if leg2_lot < min_lot:
-            leg1_lot = total_lot
-            leg2_lot = 0.0
-
-        # 1. Bacak Emri Gönder (TP1)
-        res1 = self._send_single_deal(symbol, order_type, entry_price, leg1_lot, sl_price, tp1_price, f"{comment}_L1")
-        if not res1:
-            logger.error(f"Leg 1 order placement failed for {symbol}")
+        if total_lot is None:
+            logger.warning("Twin order rejected before submission: safe lot sizing failed for %s.", symbol)
+            return None
+        step = float(getattr(sym_info, "volume_step", 0.0) or 0.0)
+        min_lot = float(getattr(sym_info, "volume_min", 0.0) or 0.0)
+        if step <= 0 or min_lot <= 0:
+            logger.error("Invalid broker volume step/minimum for %s.", symbol)
+            return None
+        if not self._check_margin(symbol, order_type, total_lot, entry_price):
             return None
 
-        # 2. Bacak Emri Gönder (TP2 - Runner)
-        res2 = None
-        if leg2_lot >= min_lot:
-            # Re-fetch tick for latest price
-            tick2 = mt5.symbol_info_tick(symbol)
-            fill_p2 = tick2.ask if is_buy else tick2.bid
-            res2 = self._send_single_deal(symbol, order_type, fill_p2, leg2_lot, sl_price, tp2_price, f"{comment}_L2")
+        # If both legs cannot independently meet minimum volume, place one order
+        # with the total risk-approved volume. Never increase volume to force a split.
+        if total_lot < (2.0 * min_lot - 1e-12):
+            single = self._send_single_deal(symbol, order_type, entry_price, total_lot, float(sl_price), float(tp2_price), f"{comment}_SINGLE")
+            if not single:
+                return None
+            return {
+                "leg1_ticket": single["ticket"], "leg1_vol": total_lot, "leg1_tp": tp2_price,
+                "leg2_ticket": None, "leg2_vol": 0.0, "leg2_tp": tp2_price,
+                "entry_price": single["price"], "sl_price": sl_price, "total_lot": total_lot,
+                "is_split": False,
+            }
 
-        logger.info(f"🚀 İkiz Emir İletildi: L1=#{res1['ticket']} ({leg1_lot}L @ TP1:{tp1_price}) | L2=#{res2['ticket'] if res2 else 'N/A'} ({leg2_lot}L @ TP2:{tp2_price})")
+        leg1_lot = self._floor_to_step(total_lot / 2.0, step)
+        leg2_lot = self._floor_to_step(total_lot - leg1_lot, step)
+        if leg1_lot < min_lot or leg2_lot < min_lot or leg1_lot + leg2_lot > total_lot + 1e-10:
+            logger.error("Safe twin split could not satisfy broker constraints for %s.", symbol)
+            return None
+
+        if not self._check_margin(symbol, order_type, leg1_lot, entry_price):
+            return None
+        res1 = self._send_single_deal(symbol, order_type, entry_price, leg1_lot, float(sl_price), float(tp1_price), f"{comment}_L1")
+        if not res1:
+            logger.error("TP1 leg failed for %s.", symbol)
+            return None
+
+        tick2 = mt5.symbol_info_tick(symbol)
+        if not tick2:
+            logger.error("Could not refresh tick for TP2 leg %s; first leg remains open.", symbol)
+            return {
+                "leg1_ticket": res1["ticket"], "leg1_vol": leg1_lot, "leg1_tp": tp1_price,
+                "leg2_ticket": None, "leg2_vol": 0.0, "leg2_tp": tp2_price,
+                "entry_price": res1["price"], "sl_price": sl_price,
+                "total_lot": leg1_lot, "is_split": False, "partial_execution": True,
+            }
+        entry2 = float(tick2.ask if is_buy else tick2.bid)
+        if not self._valid_order_geometry(side, entry2, sl_price, tp2_price):
+            logger.error("Price moved past valid TP2/SL geometry after TP1 leg; second leg not sent.")
+            return {
+                "leg1_ticket": res1["ticket"], "leg1_vol": leg1_lot, "leg1_tp": tp1_price,
+                "leg2_ticket": None, "leg2_vol": 0.0, "leg2_tp": tp2_price,
+                "entry_price": res1["price"], "sl_price": sl_price,
+                "total_lot": leg1_lot, "is_split": False, "partial_execution": True,
+            }
+        if not self._check_margin(symbol, order_type, leg2_lot, entry2):
+            logger.error("TP2 leg margin check failed after TP1 leg; first leg remains open.")
+            return {
+                "leg1_ticket": res1["ticket"], "leg1_vol": leg1_lot, "leg1_tp": tp1_price,
+                "leg2_ticket": None, "leg2_vol": 0.0, "leg2_tp": tp2_price,
+                "entry_price": res1["price"], "sl_price": sl_price,
+                "total_lot": leg1_lot, "is_split": False, "partial_execution": True,
+            }
+        res2 = self._send_single_deal(symbol, order_type, entry2, leg2_lot, float(sl_price), float(tp2_price), f"{comment}_L2")
+        if not res2:
+            logger.error("TP2 leg failed after TP1 leg opened for %s.", symbol)
+            return {
+                "leg1_ticket": res1["ticket"], "leg1_vol": leg1_lot, "leg1_tp": tp1_price,
+                "leg2_ticket": None, "leg2_vol": 0.0, "leg2_tp": tp2_price,
+                "entry_price": res1["price"], "sl_price": sl_price,
+                "total_lot": leg1_lot, "is_split": False, "partial_execution": True,
+            }
+
         return {
-            "leg1_ticket": res1["ticket"],
-            "leg1_vol": leg1_lot,
-            "leg1_tp": tp1_price,
-            "leg2_ticket": res2["ticket"] if res2 else None,
-            "leg2_vol": leg2_lot,
-            "leg2_tp": tp2_price,
-            "entry_price": res1["price"],
-            "sl_price": sl_price,
-            "total_lot": total_lot,
-            "is_split": bool(res2 is not None)
+            "leg1_ticket": res1["ticket"], "leg1_vol": leg1_lot, "leg1_tp": tp1_price,
+            "leg2_ticket": res2["ticket"], "leg2_vol": leg2_lot, "leg2_tp": tp2_price,
+            "entry_price": res1["price"], "sl_price": sl_price,
+            "total_lot": leg1_lot + leg2_lot, "is_split": True,
         }
 
     def _send_single_deal(self, symbol: str, order_type: int, price: float, volume: float, sl: float, tp: float, comment: str) -> Optional[Dict[str, Any]]:
-        req = {
+        if mt5 is None or not math.isfinite(float(volume)) or float(volume) <= 0:
+            return None
+        request = {
             "action": mt5.TRADE_ACTION_DEAL,
             "symbol": symbol,
-            "volume": volume,
+            "volume": float(volume),
             "type": order_type,
-            "price": price,
-            "sl": float(sl) if sl > 0 else 0.0,
-            "tp": float(tp) if tp > 0 else 0.0,
+            "price": float(price),
+            "sl": float(sl),
+            "tp": float(tp),
             "deviation": 20,
             "magic": self.magic,
             "comment": comment[:31],
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC,
         }
-        res = mt5.order_send(req)
-        if res is None or res.retcode != mt5.TRADE_RETCODE_DONE:
-            req["type_filling"] = mt5.ORDER_FILLING_FOK
-            res = mt5.order_send(req)
-        if res is None or res.retcode != mt5.TRADE_RETCODE_DONE:
-            err = res.comment if res else mt5.last_error()
-            logger.error(f"MT5 Single Deal Send Failed: {err}")
+        result = mt5.order_send(request)
+        if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
+            request["type_filling"] = mt5.ORDER_FILLING_FOK
+            result = mt5.order_send(request)
+        if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
+            err = result.comment if result else mt5.last_error()
+            logger.error("MT5 order send failed for %s: %s", symbol, err)
             return None
-        return {"ticket": res.order, "deal": res.deal, "volume": volume, "price": res.price}
+        return {"ticket": result.order, "deal": result.deal, "volume": float(volume), "price": result.price}
 
     def modify_position_sl(self, ticket: int, symbol: str, new_sl: float, current_tp: float = 0.0) -> bool:
-        """Pozisyonun Stop Loss seviyesini günceller (Break-Even veya İz Süren Stop)."""
         if not self.ensure_connected():
             return False
         req = {
@@ -269,35 +444,31 @@ class MegalordMT5Executor:
         }
         res = mt5.order_send(req)
         if res is not None and res.retcode == mt5.TRADE_RETCODE_DONE:
-            logger.info(f"🎯 Pozisyon SL Güncellendi: #{ticket} ({symbol}) -> Yeni SL: {new_sl}")
+            logger.info("Position SL updated: ticket=%s symbol=%s SL=%s", ticket, symbol, new_sl)
             return True
-        logger.warning(f"⚠️ Pozisyon SL Güncelleme Başarısız #{ticket}: {res.comment if res else mt5.last_error()}")
+        logger.warning("Position SL update failed #%s: %s", ticket, res.comment if res else mt5.last_error())
         return False
 
     def get_open_position(self, ticket: int) -> Optional[Any]:
-        """Açık pozisyonu kontrol eder."""
         if not self.ensure_connected():
             return None
         positions = mt5.positions_get(ticket=int(ticket))
-        if positions and len(positions) > 0:
-            return positions[0]
-        return None
+        return positions[0] if positions else None
 
     def get_position_close_deal(self, position_id: int) -> Optional[Dict[str, Any]]:
-        """Pozisyonun kapanış fişini (deal) sorgular."""
         if not self.ensure_connected():
             return None
         deals = mt5.history_deals_get(position=int(position_id))
         if deals:
-            # Find the exit deal (entry == 1)
-            for d in reversed(deals):
-                if d.entry == 1:
+            # MT5 exit deals commonly have entry == 1.
+            for deal in reversed(deals):
+                if deal.entry == 1:
                     return {
-                        "ticket": d.ticket,
-                        "order": d.order,
-                        "profit": d.profit,
-                        "price": d.price,
-                        "comment": d.comment,
-                        "time": d.time
+                        "ticket": deal.ticket,
+                        "order": deal.order,
+                        "profit": deal.profit,
+                        "price": deal.price,
+                        "comment": deal.comment,
+                        "time": deal.time,
                     }
         return None
