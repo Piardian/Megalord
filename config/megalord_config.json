@@ -1,6 +1,6 @@
 {
   "system_name": "Megalord Meta-Allocator & Multi-Strategy Orchestrator",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "target_account": 26735345,
   "telegram": {
     "bot_username": "Piardian_bot",
@@ -13,11 +13,28 @@
     "base_risk_pct": 0.50,
     "require_order_calc_profit": true
   },
+  "weekend_trading": {
+    "enabled": true,
+    "allowed_symbols": [
+      "XRPUSD",
+      "BTCUSD",
+      "ETHUSD",
+      "LTCUSD",
+      "SOLUSD",
+      "DOGUSD",
+      "BTCEUR",
+      "ETHEUR"
+    ],
+    "friday_close_hour_utc": 21,
+    "sunday_open_hour_utc": 21
+  },
   "signal_quality_filter": {
     "enabled": true,
     "max_signal_age_seconds": 900,
+    "max_pending_limit_age_seconds": 14400,
     "max_spread_to_sl_ratio": 0.10,
     "max_entry_drift_r": 0.25,
+    "min_tp1_rr": 0.60,
     "min_tp2_rr": 1.50,
     "min_score": 60,
     "require_sl": true,
@@ -68,6 +85,7 @@
     "orthogonal_confluence_multiplier": 1.30,
     "clone_confluence_cap": 0.60,
     "counter_trend_mean_reversion_multiplier": 0.50,
+    "begonya00_aplus_multiplier": 0.80,
     "consecutive_loss_cooldown_threshold": 3,
     "consecutive_loss_cooldown_multiplier": 0.50
   }

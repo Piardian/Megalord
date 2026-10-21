@@ -369,11 +369,12 @@ class MegalordDaemon:
                             candidate.tp2_price = round(float(candidate.tp2_price) + basis_shift, 5)
                         candidate.metadata["basis_shift_applied"] = round(basis_shift, 5)
 
-            # 1. Evaluate candidate through Arbiter (Confluence, Clone, MR vs Trend, Compass-only)
+            # 1. Evaluate candidate through Arbiter (Confluence, Clone, MR vs Trend, Compass-only, Weekend Filter)
             decision: ArbiterDecision = self.arbiter.evaluate_signal(
                 candidate=candidate,
                 active_positions=open_positions,
                 macro_htf_bias=macro_bias,
+                now_utc=datetime.now(timezone.utc),
             )
 
             # Do NOT permanently burn PENDING_LIMIT signals when waiting for price to pull back into entry box
@@ -933,6 +934,11 @@ class MegalordDaemon:
         print(f"Açık Pozisyon Sayısı    : {len(open_pos)} | Toplam Açık Risk: {total_open_risk:.2f} R")
         print(f"Ortogonal Konfluens      : {perf.get('confluence_boosts_count', 0)} Kez Tetiklendi (1.30x Boost)")
         print(f"Engellenen / Vetolanan   : {perf.get('firewall_blocks_count', 0)} Firewall | {perf.get('vetoes_count', 0)} HTF Çatışma Veto")
+        now_utc = datetime.now(timezone.utc)
+        if self.arbiter.quality_filter.is_weekend_session(now_utc):
+            print("-" * 80)
+            print("⚡ HAFTASONU SEANSI AKTİF (Cuma 21:00 UTC - Pazar 21:00 UTC)")
+            print("   Yalnızca 7/24 Kripto Pariteleri: XRPUSD, BTCUSD, ETHUSD, LTCUSD, SOLUSD, DOGUSD, BTCEUR, ETHEUR")
         print("-" * 80)
         print("AKTİF MOTOR MATRİSİ (FAZ 4 SAFRA TEMİZLİĞİ SONRASI):")
         engine_weights = self.config.get("allocator", {}).get("base_engine_weights", {})

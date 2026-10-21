@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Set
 
 from megalord.types import StrategyRegime, TradeSignal
 
@@ -39,6 +39,17 @@ class SignalQualityFilter:
         self.require_entry = bool(cfg.get("require_entry", True))
         self.veto_trend_htf_conflict = bool(cfg.get("veto_trend_htf_conflict", True))
 
+        # Weekend schedule configuration (traditional FX/Indices closed Fri 21:00 - Sun 21:00 UTC)
+        weekend_cfg = cfg.get("weekend_trading", {})
+        self.weekend_filter_enabled = bool(weekend_cfg.get("enabled", True))
+        default_crypto = {
+            "XRPUSD", "BTCUSD", "ETHUSD", "LTCUSD", "SOLUSD", "DOGUSD", "BTCEUR", "ETHEUR"
+        }
+        allowed = weekend_cfg.get("allowed_symbols")
+        self.weekend_allowed_symbols: Set[str] = set(allowed) if allowed else default_crypto
+        self.weekend_friday_close_hour = int(weekend_cfg.get("friday_close_hour_utc", 21))
+        self.weekend_sunday_open_hour = int(weekend_cfg.get("sunday_open_hour_utc", 21))
+
     @staticmethod
     def _finite_positive(value: Any) -> bool:
         try:
@@ -60,6 +71,31 @@ class SignalQualityFilter:
         except Exception:
             return None
 
+    def is_weekend_session(self, ts: Any = None) -> bool:
+        """Determines if traditional financial markets are closed for the weekend in UTC."""
+        if not self.weekend_filter_enabled:
+            return False
+        import pandas as pd
+        if ts is None:
+            t = pd.Timestamp.now(tz="UTC")
+        elif not isinstance(ts, pd.Timestamp):
+            t = pd.Timestamp(ts)
+        else:
+            t = ts
+        if t.tzinfo is None:
+            t = t.tz_localize("UTC")
+        else:
+            t = t.tz_convert("UTC")
+
+        weekday = t.weekday()  # 0=Monday, 4=Friday, 5=Saturday, 6=Sunday
+        if weekday == 4 and t.hour >= self.weekend_friday_close_hour:
+            return True
+        if weekday == 5:
+            return True
+        if weekday == 6 and t.hour < self.weekend_sunday_open_hour:
+            return True
+        return False
+
     def evaluate(self, signal: TradeSignal, *, now_utc: Any = None, allow_historical: bool = False) -> SignalQualityResult:
         if not self.enabled:
             return SignalQualityResult(True, 100, "QUALITY_FILTER_DISABLED", "Signal quality filter is disabled.")
@@ -77,6 +113,24 @@ class SignalQualityFilter:
         direction = str(signal.direction).upper()
         if direction not in ("LONG", "SHORT"):
             return SignalQualityResult(False, 0, "QUALITY_INVALID_DIRECTION", f"Unsupported direction: {signal.direction!r}.", metrics)
+
+        # 0. Weekend Session Gate: When FX/Indices are closed, ONLY 24/7 Crypto is permitted
+        if self.is_weekend_session(now_utc):
+            norm_sym = signal.symbol.upper().replace("/", "").replace("-", "").replace("_", "").strip()
+            if norm_sym.endswith("USDT"):
+                norm_sym = norm_sym[:-4] + "USD"
+            if norm_sym == "DOGEUSD":
+                norm_sym = "DOGUSD"
+            if norm_sym not in self.weekend_allowed_symbols:
+                return SignalQualityResult(
+                    False,
+                    0,
+                    "QUALITY_WEEKEND_MARKET_CLOSED",
+                    f"Haftasonu seansı aktif (Cuma {self.weekend_friday_close_hour}:00 UTC - Pazar {self.weekend_sunday_open_hour}:00 UTC). Yalnızca 7/24 Kripto paritelerine ({', '.join(sorted(self.weekend_allowed_symbols))}) izin verilir; '{signal.symbol}' piyasası kapalıdır.",
+                    {"symbol": signal.symbol, "is_weekend": True},
+                )
+            metrics["is_weekend"] = True
+            metrics["weekend_crypto_verified"] = True
 
         entry = signal.entry_price
         stop = signal.sl_price
@@ -106,7 +160,7 @@ class SignalQualityFilter:
             else:
                 metrics["tp1_rr"] = None
 
-            tp2 = getattr(signal, "tp2_price", 0.0)
+            tp2 = signal.tp2_price
             if self._finite_positive(tp2):
                 reward = float(tp2) - entry_f if direction == "LONG" else entry_f - float(tp2)
                 if reward <= 0:

@@ -44,7 +44,11 @@ class MegalordSignalArbiter:
         self.begonya00_aplus_mult = float(alloc_cfg.get("begonya00_aplus_multiplier", 0.80))
         self.cooldown_threshold = int(alloc_cfg.get("consecutive_loss_cooldown_threshold", 3))
         self.cooldown_multiplier = float(alloc_cfg.get("consecutive_loss_cooldown_multiplier", 0.50))
-        self.quality_filter = SignalQualityFilter(cfg.get("signal_quality_filter", {}))
+        
+        q_cfg = dict(cfg.get("signal_quality_filter", {}))
+        if "weekend_trading" in cfg:
+            q_cfg["weekend_trading"] = cfg["weekend_trading"]
+        self.quality_filter = SignalQualityFilter(q_cfg)
         self.engine_loss_streaks: Dict[str, int] = {}
 
     def record_trade_outcome(self, engine_name: str, pnl_r: float):
@@ -58,6 +62,7 @@ class MegalordSignalArbiter:
         candidate: TradeSignal,
         active_positions: List[Dict[str, Any]],
         macro_htf_bias: Optional[str] = None,
+        now_utc: Any = None,
         allow_historical: bool = False,
     ) -> ArbiterDecision:
         engine = candidate.engine_name
@@ -98,7 +103,7 @@ class MegalordSignalArbiter:
             )
 
         # 1. Quality filter is a veto layer; it does not modify engine entry logic.
-        quality = self.quality_filter.evaluate(candidate, allow_historical=allow_historical)
+        quality = self.quality_filter.evaluate(candidate, now_utc=now_utc, allow_historical=allow_historical)
         if not quality.allowed:
             return ArbiterDecision(
                 allowed=False,

@@ -22,14 +22,20 @@ from megalord.types import TradeSignal, MathFamily, StrategyRegime
 
 # --- ENGINE-SPECIFIC STRICT INSTITUTIONAL WHITELISTS ---
 # Removed chronic negative-expectancy crosses: AUDJPY, CADJPY, EURJPY, EURGBP, EURAUD
+# The 5%ers MT5 24/7 Verified Crypto Symbols (Weekend Trading Set)
+WEEKEND_CRYPTO_WHITELIST: Set[str] = {
+    "XRPUSD", "BTCUSD", "ETHUSD", "LTCUSD", "SOLUSD", "DOGUSD", "BTCEUR", "ETHEUR"
+}
+
 BEGONYA00_WHITELIST: Set[str] = {
     "EURUSD", "GBPUSD", "USDJPY", "USDCAD", "USDCHF", "XAUUSD",
     "GBPCHF", "AUDCAD", "AUDCHF", "CHFJPY",
     "CADCHF", "NZDCAD", "NZDUSD", "EURCHF"
-}
+} | WEEKEND_CRYPTO_WHITELIST
+
 PRAGMA_WHITELIST: Set[str] = {"CADCHF", "EURUSD"}
-TRAWMA_WHITELIST: Set[str] = {"NAS100", "BTCUSD"}
-STIGMA_WHITELIST: Set[str] = {"USDJPY", "NAS100", "BTCUSD"}
+TRAWMA_WHITELIST: Set[str] = {"NAS100"} | WEEKEND_CRYPTO_WHITELIST
+STIGMA_WHITELIST: Set[str] = {"USDJPY", "NAS100"} | WEEKEND_CRYPTO_WHITELIST
 CHECKLIST_WHITELIST: Set[str] = {"EURUSD", "GBPUSD", "AUDUSD"}
 
 
@@ -37,6 +43,8 @@ def norm_symbol(s: str) -> str:
     s = str(s).upper().replace("/", "").replace("-", "").replace("_", "").strip()
     if s.endswith("USDT"):
         s = s[:-4] + "USD"
+    if s == "DOGEUSD":
+        s = "DOGUSD"
     return s
 
 

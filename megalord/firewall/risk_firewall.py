@@ -37,9 +37,12 @@ class MegalordRiskFirewall:
         elif "NAS" in s or "NQ" in s or "SP500" in s or "ES" in s or "INDEX" in s:
             legs.append("INDEX")
             legs.append("USD")
-        elif "BTC" in s or "ETH" in s or "SOL" in s or "LINK" in s:
+        elif any(c in s for c in ("BTC", "ETH", "SOL", "XRP", "LTC", "DOG", "LINK")):
             legs.append("CRYPTO")
-            legs.append("USD")
+            if "EUR" in s:
+                legs.append("EUR")
+            else:
+                legs.append("USD")
         else:
             # FX currencies
             for cur in ("USD", "JPY", "EUR", "GBP", "CHF", "AUD", "CAD", "NZD"):
