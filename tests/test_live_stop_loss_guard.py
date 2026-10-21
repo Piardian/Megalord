@@ -86,3 +86,5 @@ def test_already_correct_broker_side_sl_is_accepted(monkeypatch):
     assert fake.sent == []
 
 # These tests exercise broker-side stop-loss verification and fail-closed prechecks.
+
+# Regression guard: a filled order is accepted only after the broker-side SL is confirmed.
