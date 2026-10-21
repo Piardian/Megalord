@@ -84,3 +84,5 @@ def test_already_correct_broker_side_sl_is_accepted(monkeypatch):
 
     assert executor._verify_or_restore_stop_loss(123, "EURUSD", 0.05, fake.ORDER_TYPE_BUY, 1.0990)
     assert fake.sent == []
+
+# These tests exercise broker-side stop-loss verification and fail-closed prechecks.
