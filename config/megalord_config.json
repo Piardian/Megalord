@@ -1,12 +1,28 @@
 {
   "system_name": "Megalord Meta-Allocator & Multi-Strategy Orchestrator",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "target_account": 26735345,
   "telegram": {
     "bot_username": "Piardian_bot",
     "bot_token": "",
     "chat_id": "",
     "enabled": true
+  },
+  "risk_sizing": {
+    "risk_basis": "equity",
+    "require_order_calc_profit": true,
+    "risk_tolerance_pct": 0.001
+  },
+  "signal_quality_filter": {
+    "enabled": true,
+    "max_signal_age_seconds": 900,
+    "max_spread_to_sl_ratio": 0.10,
+    "max_entry_drift_r": 0.25,
+    "min_tp2_rr": 1.50,
+    "min_score": 60,
+    "require_sl": true,
+    "require_entry": true,
+    "veto_trend_htf_conflict": true
   },
   "firewall": {
     "max_daily_loss_pct": 2.5,
