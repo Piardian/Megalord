@@ -93,8 +93,8 @@ class TestMegalordArchitecture(unittest.TestCase):
         self.assertFalse(decision.allowed)
         self.assertEqual(decision.action, "HTF_CONFLICT_VETO")
 
-    def test_htf_trend_conflict_dampens_mean_reversion_engine(self):
-        """If active HTF Trend is LONG, an opposing SHORT from approved Mean-Reversion is permitted at 0.50x risk."""
+    def test_htf_trend_without_confirmed_range_blocks_mean_reversion_engine(self):
+        """An HTF trend cannot substitute for the required verified MR range."""
         pos_convexity = {
             "symbol": "NAS100", "direction": "LONG",
             "math_family": MathFamily.FAMILY_MACRO_TREND.value,
@@ -111,10 +111,9 @@ class TestMegalordArchitecture(unittest.TestCase):
         )
 
         decision = self.arbiter.evaluate_signal(sig_mr_short, [pos_convexity])
-        self.assertTrue(decision.allowed)
-        self.assertEqual(decision.action, "COUNTER_TREND_MR_DAMPED")
-        expected_damped = 0.85 * 0.50  # Stigma base 0.85 * 0.50 = 0.425
-        self.assertAlmostEqual(decision.final_risk_mult, expected_damped, places=2)
+        self.assertFalse(decision.allowed)
+        self.assertEqual(decision.action, "NATURAL_BAND_REQUIRED")
+        self.assertEqual(decision.final_risk_mult, 0.0)
 
     # =========================================================================
     # Test 4: Risk Firewall Worst-Case Daily Drawdown (Rule 4)

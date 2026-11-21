@@ -25,3 +25,13 @@ htmlcov/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+*.log
+*.err
+*.lock
+*.jsonl
+*.parquet
+.pytest_tmp*/
+audit/
+data/
+evidence/

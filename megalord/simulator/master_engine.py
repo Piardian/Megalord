@@ -17,16 +17,22 @@ from megalord.firewall.risk_firewall import MegalordRiskFirewall
 
 class MegalordSimulator:
     def __init__(self, config_path: Optional[str] = None):
-        cfg_file = Path(config_path) if config_path else Path(__file__).resolve().parent.parent / "config" / "megalord_config.json"
-        self.config = json.loads(cfg_file.read_text(encoding="utf-8")) if cfg_file.exists() else {}
+        cfg_file = Path(config_path) if config_path else Path(__file__).resolve().parents[2] / "config" / "megalord_config.json"
+        # Missing configuration must not silently replace actual risk weights
+        # and execution toggles with a different strategy's defaults.
+        self.config = json.loads(cfg_file.read_text(encoding="utf-8"))
+        self.config_path = cfg_file.resolve()
         self.arbiter = MegalordSignalArbiter(self.config)
         self.firewall = MegalordRiskFirewall(self.config)
 
-    def run_orchestration(self, signals: List[TradeSignal]) -> Dict[str, Any]:
+    def run_orchestration(self, signals: List[TradeSignal], macro_gate_provider: Optional[Any] = None) -> Dict[str, Any]:
         """
         Simulates master portfolio execution across all signals.
         Tracks active positions, daily realized loss, worst-case open risk, and decisions.
         """
+        # Reusing a simulator for another date window must not carry the last
+        # window's (potentially future) loss streak into its initial state.
+        self.arbiter.engine_loss_streaks.clear()
         sorted_sigs = sorted(signals, key=lambda s: s.entry_time)
 
         executed_trades = []
@@ -39,27 +45,41 @@ class MegalordSimulator:
         for sig in sorted_sigs:
             sig_day = sig.entry_time.date()
 
-            # Close any open positions whose exit_time <= sig.entry_time
-            still_open = []
-            for pos in open_positions:
-                pos_exit = pos.get("exit_time")
-                if pos_exit and pos_exit <= sig.entry_time:
-                    # Position closed!
-                    pnl_r = pos["effective_r"]
-                    self.arbiter.record_trade_outcome(pos["engine_name"], pnl_r)
-                    if pos_exit.date() == sig_day and pnl_r < 0:
-                        daily_realized_loss_r += abs(pnl_r)
-                else:
-                    still_open.append(pos)
-            open_positions = still_open
-
-            # Daily loss reset on new day
+            # Reset BEFORE applying overnight positions closed today. Doing
+            # this afterwards erased their losses at the first entry of a day.
             if current_day != sig_day:
                 current_day = sig_day
                 daily_realized_loss_r = 0.0
 
-            # 1. Arbiter Evaluation (Confluence, Clone Cap, Trend vs MR)
-            arb_decision = self.arbiter.evaluate_signal(sig, open_positions, allow_historical=True)
+            # Close any open positions whose exit_time <= sig.entry_time
+            due = sorted(
+                [p for p in open_positions if p.get("exit_time") is not None and p["exit_time"] <= sig.entry_time],
+                key=lambda p: (p["exit_time"], p["signal_id"]),
+            )
+            for pos in due:
+                pnl_r = pos["effective_r"]
+                self.arbiter.record_trade_outcome(pos["engine_name"], pnl_r)
+                if pos["exit_time"].date() == sig_day and pnl_r < 0:
+                    daily_realized_loss_r += abs(pnl_r)
+            open_positions = [p for p in open_positions if p.get("exit_time") is None or p["exit_time"] > sig.entry_time]
+
+            # Determine Macro Gate Bias for candidate
+            macro_bias = None
+            if macro_gate_provider is not None:
+                try:
+                    macro_bias = macro_gate_provider(sig.entry_time, sig.symbol)
+                except Exception:
+                    macro_bias = None
+            if not macro_bias and sig.metadata and "macro_gate" in sig.metadata:
+                macro_bias = sig.metadata["macro_gate"]
+
+            # 1. Arbiter Evaluation (Confluence, Clone Cap, Trend vs MR, Natural Band)
+            arb_decision = self.arbiter.evaluate_signal(
+                candidate=sig,
+                active_positions=open_positions,
+                macro_htf_bias=macro_bias,
+                allow_historical=True,
+            )
             if not arb_decision.allowed:
                 rejected_trades.append({
                     "signal_id": sig.signal_id,
@@ -116,7 +136,13 @@ class MegalordSimulator:
             open_positions.append(trade_record)
 
         # Performance Metrics Calculation
-        r_list = [t["effective_r"] for t in executed_trades]
+        realized_trades = sorted(
+            [t for t in executed_trades if t["exit_time"] is not None],
+            key=lambda t: (t["exit_time"], t["signal_id"]),
+        )
+        # Equity is realized in exit order, not the order positions were opened.
+        # Still-open records cannot contribute their supplied future outcome.
+        r_list = [t["effective_r"] for t in realized_trades]
         n = len(r_list)
         wins = [r for r in r_list if r > 0]
         losses = [r for r in r_list if r < 0]
@@ -141,19 +167,37 @@ class MegalordSimulator:
 
         ret_dd = (net_r / max_dd) if max_dd > 0 else 0.0
 
-        # Daily Sharpe (assuming 252 trading days)
-        if executed_trades:
-            df_trades = pd.DataFrame(executed_trades)
-            df_trades["date"] = pd.to_datetime(df_trades["entry_time"]).dt.date
-            daily_r = df_trades.groupby("date")["effective_r"].sum()
+        # Calendar-day closed-R proxy. Include inactive days and use actual
+        # close times; this is explicitly not an account-return Sharpe ratio.
+        if realized_trades:
+            df_trades = pd.DataFrame(realized_trades)
+            df_trades["date"] = pd.to_datetime(df_trades["exit_time"], utc=True).dt.floor("D")
+            start = min(pd.Timestamp(t["entry_time"]).tz_convert("UTC") for t in executed_trades).floor("D")
+            end = max(
+                max(pd.Timestamp(t["exit_time"]).tz_convert("UTC") for t in realized_trades),
+                max(pd.Timestamp(t["entry_time"]).tz_convert("UTC") for t in executed_trades),
+            ).floor("D")
+            daily_r = df_trades.groupby("date")["effective_r"].sum().reindex(pd.date_range(start, end, freq="D"), fill_value=0.0)
             std = daily_r.std()
-            sharpe = (daily_r.mean() / std * (252 ** 0.5)) if std > 0 else 0.0
+            sharpe = (daily_r.mean() / std * (365.25 ** 0.5)) if std > 0 else 0.0
         else:
             sharpe = 0.0
 
         return {
+            "simulation_scope": "historical_outcome_allocation_replay",
+            "live_readiness_proven": False,
+            "config_path": str(self.config_path),
+            "r_statistics_basis": "closed native outcomes in exit-time order; open positions excluded",
+            "sharpe_basis": "calendar-day closed-R proxy including zero days; not account-return Sharpe",
+            "limitations": [
+                "Native outcomes are supplied by adapters, not reconstructed from broker fills.",
+                "Historical quality bypass is enabled; this is not test/live entry or exit parity.",
+            ],
             "total_signals_received": len(signals),
-            "executed_trades_count": n,
+            "executed_trades_count": len(executed_trades),
+            "realized_trades_count": n,
+            "open_trades_count": len(executed_trades) - n,
+            "realized_signal_ids": [t["signal_id"] for t in realized_trades],
             "rejected_trades_count": len(rejected_trades),
             "win_rate_pct": round(wr, 2),
             "profit_factor": round(pf, 2),

@@ -1,8 +1,9 @@
 """Megalord Signal Arbiter with quality gating, confluence, and conflict arbitration."""
 from __future__ import annotations
 
+import math
 from typing import Dict, List, Any, Optional
-from megalord.types import TradeSignal, ArbiterDecision, MathFamily, StrategyRegime
+from megalord.types import TradeSignal, ArbiterDecision, MathFamily, StrategyRegime, GLOBAL_EXECUTION_WHITELIST
 from megalord.filters.signal_quality_filter import SignalQualityFilter
 
 
@@ -77,6 +78,16 @@ class MegalordSignalArbiter:
                 reason="Completed historical trade record cannot be executed as a new entry.",
             )
 
+        # 0. Institutional Whitelist Gate (Fail-closed if set)
+        norm_sym = str(candidate.symbol).upper().replace("/", "").replace("-", "").replace("_", "").strip()
+        if GLOBAL_EXECUTION_WHITELIST is not None and norm_sym not in GLOBAL_EXECUTION_WHITELIST:
+            return ArbiterDecision(
+                allowed=False,
+                final_risk_mult=0.0,
+                action="QUALITY_UNWHITELISTED_SYMBOL",
+                reason=f"Symbol {candidate.symbol} ({norm_sym}) is not on the institutional approved execution whitelist.",
+            )
+
         # 0. Execution eligibility before running signal-quality checks.
         if not self.engine_execution_enabled.get(engine, True):
             if engine in self.compass_only_engines:
@@ -123,28 +134,59 @@ class MegalordSignalArbiter:
         if cooldown_applied:
             base_w *= self.cooldown_multiplier
 
-        # 3. HTF macro/trend conflict.
-        htf_trend_dir = macro_htf_bias if macro_htf_bias in ("LONG", "SHORT") else None
-        for pos in active_positions:
-            if pos.get("symbol") == candidate.symbol and pos.get("math_family") == MathFamily.FAMILY_MACRO_TREND.value:
-                htf_trend_dir = pos.get("direction")
-                break
+        # 3. Macro Trend & Natural Band Regime Arbitration
+        # Macro gates: LONG_ONLY (LONG), SHORT_ONLY (SHORT), or NATURAL_BAND / NEUTRAL_RANGE.
+        # User Institutional Rule:
+        # - Directional Macro Trend (LONG_ONLY / SHORT_ONLY): Mean-reversion engines must STAY AWAY (VETO).
+        #   Trend/Momentum engines must align strictly with the macro trend direction.
+        # - NATURAL_BAND / NEUTRAL_RANGE: Ideal habitat for Mean-Reversion engines (Fully APPROVED).
+        macro_gate_str = str(macro_htf_bias or "").upper().strip()
+        htf_trend_dir = None
+        if macro_gate_str in ("LONG_ONLY", "LONG", "+1", "BULLISH"):
+            htf_trend_dir = "LONG"
+        elif macro_gate_str in ("SHORT_ONLY", "SHORT", "-1", "BEARISH"):
+            htf_trend_dir = "SHORT"
 
-        if htf_trend_dir and htf_trend_dir != candidate.direction:
-            if candidate.strategy_regime == StrategyRegime.TREND_MOMENTUM:
+        # Also check if any open position in MACRO_TREND family exists
+        if not htf_trend_dir:
+            for pos in active_positions:
+                if pos.get("symbol") == candidate.symbol and pos.get("math_family") == MathFamily.FAMILY_MACRO_TREND.value:
+                    htf_trend_dir = pos.get("direction")
+                    break
+
+        # Empirical Quantitative Data Verification for Natural Band / Mean Reversion:
+        # Not just string checking: verify quantitative metrics (Hurst exponent & empirical trend slope)
+        if candidate.strategy_regime == StrategyRegime.MEAN_REVERSION:
+            is_confirmed_natural_band = macro_gate_str in ("NATURAL_BAND", "NEUTRAL_RANGE", "NEUTRAL", "RANGE", "0")
+            if not is_confirmed_natural_band:
+                trend_ctx = f"directional trend ({htf_trend_dir}_ONLY)" if htf_trend_dir else f"unverified macro regime ({macro_gate_str or 'MISSING'})"
+                return ArbiterDecision(
+                    allowed=False,
+                    final_risk_mult=0.0,
+                    action="NATURAL_BAND_REQUIRED",
+                    reason=f"Mean-Reversion strictly blocked under {trend_ctx}. Permitted ONLY when NATURAL_BAND / NEUTRAL_RANGE is actively confirmed.",
+                )
+
+            # Empirical Data Check: Hurst exponent verification
+            # In financial physics, H < 0.5 indicates mean-reverting (anti-persistent) regime.
+            # If H >= 0.50 (random walk or trending persistence), reject mean-reversion.
+            h_val = float((candidate.metadata or {}).get("hurst", float("nan")))
+            if math.isfinite(h_val) and h_val >= 0.50:
+                return ArbiterDecision(
+                    allowed=False,
+                    final_risk_mult=0.0,
+                    action="EMPIRICAL_TREND_DETECTED",
+                    reason=f"Mean-Reversion rejected: Empirical market data shows trending persistence (Hurst H={h_val:.3f} >= 0.50). Natural Band mathematically invalid.",
+                )
+
+        if htf_trend_dir:
+            # Active Directional Macro Trend: Trend/Momentum engines must strictly align
+            if candidate.strategy_regime == StrategyRegime.TREND_MOMENTUM and candidate.direction != htf_trend_dir:
                 return ArbiterDecision(
                     allowed=False,
                     final_risk_mult=0.0,
                     action="HTF_CONFLICT_VETO",
                     reason=f"Opposite direction ({candidate.direction}) to active HTF Trend ({htf_trend_dir}) for Trend/Momentum engine.",
-                )
-            if candidate.strategy_regime == StrategyRegime.MEAN_REVERSION:
-                final_mult = base_w * self.mr_counter_trend_mult
-                return ArbiterDecision(
-                    allowed=True,
-                    final_risk_mult=round(final_mult, 4),
-                    action="COUNTER_TREND_MR_DAMPED",
-                    reason=f"Mean-Reversion against HTF Trend ({htf_trend_dir}) permitted with {self.mr_counter_trend_mult:.2f}x damping.",
                 )
 
         # 4. Confluence and clone anti-collision among positions on same symbol/direction.
@@ -167,7 +209,9 @@ class MegalordSignalArbiter:
 
         if candidate.math_family.value in existing_families:
             current_family_risk = sum(
-                float(pos.get("risk_mult", pos.get("risk_r", 1.0)))
+                # The daemon stores the actual allocation under this key;
+                # older simulator records use risk_mult or risk_r instead.
+                float(pos.get("allocated_risk_r", pos.get("risk_mult", pos.get("risk_r", 1.0))))
                 for pos in same_sym_dir_positions
                 if pos.get("math_family") == candidate.math_family.value
             )

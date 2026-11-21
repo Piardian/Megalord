@@ -34,7 +34,7 @@ class MegalordRiskFirewall:
         if "XAU" in s or "GOLD" in s:
             legs.append("XAU")
             legs.append("USD")
-        elif "NAS" in s or "NQ" in s or "SP500" in s or "ES" in s or "INDEX" in s:
+        elif any(name in s for name in ("NAS", "NQ", "US100", "SPX", "SP500", "ES", "INDEX")):
             legs.append("INDEX")
             legs.append("USD")
         elif any(c in s for c in ("BTC", "ETH", "SOL", "XRP", "LTC", "DOG", "LINK")):
@@ -48,7 +48,7 @@ class MegalordRiskFirewall:
             for cur in ("USD", "JPY", "EUR", "GBP", "CHF", "AUD", "CAD", "NZD"):
                 if cur in s:
                     legs.append(cur)
-        return list(set(legs))
+        return sorted(set(legs))
 
     def evaluate_entry(
         self,

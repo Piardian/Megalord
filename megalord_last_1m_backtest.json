@@ -1,0 +1,1537 @@
+[
+  {
+    "window": "Son 30 G\u00fcn (Rolling 1 Ay: 21 Eyl - 21 Eki 2026)",
+    "total_signals": 77,
+    "executed_trades": 38,
+    "rejected_signals": 39,
+    "win_count": 19,
+    "loss_count": 16,
+    "win_rate_pct": 50.0,
+    "net_r": 5.44,
+    "expectancy_r": 0.143,
+    "profit_factor": 1.41,
+    "max_drawdown_r": 2.91,
+    "annualized_sharpe": 3.08,
+    "engine_breakdown": {
+      "Trawma": {
+        "trades": 20,
+        "wins": 11,
+        "losses": 9,
+        "net_r": 3.4886807298692286
+      },
+      "Stigma": {
+        "trades": 7,
+        "wins": 2,
+        "losses": 5,
+        "net_r": -2.93790302373273
+      },
+      "Begonya00": {
+        "trades": 11,
+        "wins": 6,
+        "losses": 2,
+        "net_r": 4.89
+      }
+    },
+    "executed_trade_list": [
+      {
+        "time": "2026-09-21 14:15:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": -1.0,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-22 14:30:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": 0.24,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-23 18:00:00+00:00",
+        "symbol": "NAS100",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -1.05,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-24 10:15:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 1.1,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-25 16:15:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -0.06,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-29 16:30:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -1.02,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-29 20:15:00+00:00",
+        "symbol": "NAS100",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 1.08,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-30 13:45:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": 1.14,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-01 12:00:00+00:00",
+        "symbol": "NAS100",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -0.25,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-02 21:00:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 0.14,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-06 15:30:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": 1.07,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-08 13:15:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -1.06,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-08 14:00:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 0.25,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-12 10:00:30.376064+00:00",
+        "symbol": "NZDUSD",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "risk_r": 1.0,
+        "net_r": 2.0,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-12 10:16:03.528630+00:00",
+        "symbol": "CHFJPY",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "risk_r": 1.0,
+        "net_r": 2.0,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-13 17:30:00+00:00",
+        "symbol": "NAS100",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": 0.53,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-14 13:45:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -1.02,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-15 06:45:00+00:00",
+        "symbol": "USDJPY",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": -0.93,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-15 14:00:00+00:00",
+        "symbol": "USDJPY",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": -0.95,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-16 17:01:52.374704+00:00",
+        "symbol": "AUDCHF",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "risk_r": 1.0,
+        "net_r": 0.53,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-16 18:02:23.270600+00:00",
+        "symbol": "AUDCHF",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "risk_r": 1.0,
+        "net_r": 0.54,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-17 13:01:15.022473+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "risk_r": 1.0,
+        "net_r": 0.94,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-18 12:01:31.818304+00:00",
+        "symbol": "XRPUSD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "risk_r": 1.0,
+        "net_r": 0.88,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-18 16:00:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -0.97,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-18 19:45:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 1.28,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-19 11:16:26.808858+00:00",
+        "symbol": "AUDCHF",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "risk_r": 1.0,
+        "net_r": -1.0,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-19 14:15:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": 1.27,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-20 10:15:00+00:00",
+        "symbol": "USDJPY",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "risk_r": 0.425,
+        "net_r": -0.49,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-20 10:15:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -0.85,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-20 12:15:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 1.27,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-20 13:45:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 1.28,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-20 14:15:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": 1.28,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-20 15:00:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": -0.85,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-21 09:30:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": -0.85,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-21 10:01:25.357580+00:00",
+        "symbol": "CHFJPY",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "risk_r": 1.0,
+        "net_r": 0.0,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-21 12:47:02.345847+00:00",
+        "symbol": "CADCHF",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "risk_r": 1.0,
+        "net_r": 0.0,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-21 14:31:41.191585+00:00",
+        "symbol": "GBPCHF",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "risk_r": 1.0,
+        "net_r": 0.0,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-21 17:47:00.913511+00:00",
+        "symbol": "CHFJPY",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "risk_r": 1.0,
+        "net_r": -1.0,
+        "action": "PROCEED"
+      }
+    ],
+    "rejected_trade_list": [
+      {
+        "time": "2026-09-21 00:00:00+00:00",
+        "symbol": "NAS100",
+        "engine": "Convexity_v2",
+        "direction": "LONG",
+        "reason": "Convexity_v2 is HTF Compass Only; execution is disabled.",
+        "action": "COMPASS_ONLY_RECORDED"
+      },
+      {
+        "time": "2026-09-21 00:00:00+00:00",
+        "symbol": "ETHUSD",
+        "engine": "Convexity_v2",
+        "direction": "LONG",
+        "reason": "Convexity_v2 is HTF Compass Only; execution is disabled.",
+        "action": "COMPASS_ONLY_RECORDED"
+      },
+      {
+        "time": "2026-09-25 17:15:00+00:00",
+        "symbol": "NAS100",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (1.70R) exceeds limit (1.50R) [Current: 0.85R, New: 0.85R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-09-25 17:45:00+00:00",
+        "symbol": "NAS100",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (1.70R) exceeds limit (1.50R) [Current: 0.85R, New: 0.85R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-09-30 14:00:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (1.96R) exceeds limit (1.50R) [Current: 0.85R, New: 1.10R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-02 21:00:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (1.96R) exceeds limit (1.50R) [Current: 0.85R, New: 1.10R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-12 10:30:59.272189+00:00",
+        "symbol": "USDCAD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.00R) exceeds max daily budget (2.50R). [Realized: 0.00R, Open SL: 2.00R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-12 11:45:54.062948+00:00",
+        "symbol": "GBPUSD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.00R) exceeds max daily budget (2.50R). [Realized: 0.00R, Open SL: 2.00R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-12 14:00:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (2.85R) exceeds max daily budget (2.50R). [Realized: 0.00R, Open SL: 2.00R, New: 0.85R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-13 07:15:00+00:00",
+        "symbol": "USDJPY",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: JPY cluster exposure (1.85R) exceeds limit (1.50R) [Current: 1.00R, New: 0.85R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-13 11:15:00+00:00",
+        "symbol": "USDJPY",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: JPY cluster exposure (1.85R) exceeds limit (1.50R) [Current: 1.00R, New: 0.85R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-14 00:00:00+00:00",
+        "symbol": "USDCHF",
+        "engine": "Convexity_v2",
+        "direction": "LONG",
+        "reason": "Convexity_v2 is HTF Compass Only; execution is disabled.",
+        "action": "COMPASS_ONLY_RECORDED"
+      },
+      {
+        "time": "2026-10-15 14:15:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (2.63R) exceeds max daily budget (2.50R). [Realized: 0.93R, Open SL: 0.85R, New: 0.85R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-17 13:03:17.986065+00:00",
+        "symbol": "SOLUSD",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (2.00R) exceeds limit (1.50R) [Current: 1.00R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-17 13:32:13.653111+00:00",
+        "symbol": "LTCUSD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (2.00R) exceeds limit (1.50R) [Current: 1.00R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-17 17:35:29.137469+00:00",
+        "symbol": "SOLUSD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (2.00R) exceeds limit (1.50R) [Current: 1.00R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-17 17:45:51.691300+00:00",
+        "symbol": "ETHUSD",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (2.00R) exceeds limit (1.50R) [Current: 1.00R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-18 12:15:59.591719+00:00",
+        "symbol": "SOLUSD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (2.00R) exceeds limit (1.50R) [Current: 1.00R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-18 18:28:34.632622+00:00",
+        "symbol": "LTCUSD",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (1.85R) exceeds limit (1.50R) [Current: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-19 12:00:35.456519+00:00",
+        "symbol": "GBPUSD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (2.85R) exceeds max daily budget (2.50R). [Realized: 0.00R, Open SL: 1.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-19 14:32:14.359126+00:00",
+        "symbol": "NZDCAD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (2.85R) exceeds max daily budget (2.50R). [Realized: 1.00R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-19 16:15:54.374022+00:00",
+        "symbol": "GBPUSD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (2.85R) exceeds max daily budget (2.50R). [Realized: 1.00R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-19 16:31:02.696033+00:00",
+        "symbol": "GBPCHF",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (2.85R) exceeds max daily budget (2.50R). [Realized: 1.00R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-19 18:02:37.845661+00:00",
+        "symbol": "NZDCAD",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (2.85R) exceeds max daily budget (2.50R). [Realized: 1.00R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 12:17:13.421788+00:00",
+        "symbol": "GBPCHF",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 13:00:24.556357+00:00",
+        "symbol": "EURUSD",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 13:46:22.925486+00:00",
+        "symbol": "CHFJPY",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 16:00:24.757453+00:00",
+        "symbol": "CADCHF",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 16:02:48.027120+00:00",
+        "symbol": "NZDCAD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 17:16:38.438160+00:00",
+        "symbol": "AUDCAD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 17:17:36.062206+00:00",
+        "symbol": "AUDCHF",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 17:18:09.319742+00:00",
+        "symbol": "CHFJPY",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 18:17:34.839647+00:00",
+        "symbol": "NZDCAD",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 18:48:18.956484+00:00",
+        "symbol": "XAUUSD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 21:30:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.04R) exceeds max daily budget (2.50R). [Realized: 2.19R, Open SL: 0.00R, New: 0.85R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-21 10:31:58.239209+00:00",
+        "symbol": "XAUUSD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (1.85R) exceeds limit (1.50R) [Current: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-21 13:30:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "reason": "Live signal age is invalid or exceeds 900s. Metrics={'stop_distance': 192.89999999999418, 'tp1_rr': 1.0, 'tp2_rr': 2.0, 'spread_to_sl_ratio': None, 'entry_drift_r': None, 'signal_age_seconds': 20618.72}",
+        "action": "QUALITY_STALE_SIGNAL"
+      },
+      {
+        "time": "2026-10-21 14:46:59.186919+00:00",
+        "symbol": "CADCHF",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (2.85R) exceeds max daily budget (2.50R). [Realized: 0.85R, Open SL: 1.00R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-21 18:31:08.547851+00:00",
+        "symbol": "CADCHF",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (2.85R) exceeds max daily budget (2.50R). [Realized: 1.85R, Open SL: 0.00R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      }
+    ]
+  },
+  {
+    "window": "Son Tam Takvim Ay\u0131 (Eyl\u00fcl 2026: 01 Eyl - 30 Eyl)",
+    "total_signals": 27,
+    "executed_trades": 15,
+    "rejected_signals": 12,
+    "win_count": 7,
+    "loss_count": 8,
+    "win_rate_pct": 46.7,
+    "net_r": 0.76,
+    "expectancy_r": 0.05,
+    "profit_factor": 1.13,
+    "max_drawdown_r": 2.81,
+    "annualized_sharpe": 0.93,
+    "engine_breakdown": {
+      "Stigma": {
+        "trades": 6,
+        "wins": 2,
+        "losses": 4,
+        "net_r": -0.7430323113486325
+      },
+      "Trawma": {
+        "trades": 9,
+        "wins": 5,
+        "losses": 4,
+        "net_r": 1.4985970998932518
+      }
+    },
+    "executed_trade_list": [
+      {
+        "time": "2026-09-02 12:00:00+00:00",
+        "symbol": "USDJPY",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -0.92,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-03 08:30:00+00:00",
+        "symbol": "USDJPY",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": 1.62,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-04 16:45:00+00:00",
+        "symbol": "NAS100",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -0.9,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-08 17:30:00+00:00",
+        "symbol": "NAS100",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 1.07,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-11 16:00:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": 0.46,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-14 17:30:00+00:00",
+        "symbol": "NAS100",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": -0.89,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-15 09:45:00+00:00",
+        "symbol": "USDJPY",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -0.1,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-21 14:15:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": -1.0,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-22 14:30:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": 0.24,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-23 18:00:00+00:00",
+        "symbol": "NAS100",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -1.05,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-24 10:15:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 1.1,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-25 16:15:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -0.06,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-29 16:30:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -1.02,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-29 20:15:00+00:00",
+        "symbol": "NAS100",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 1.08,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-09-30 13:45:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": 1.14,
+        "action": "PROCEED"
+      }
+    ],
+    "rejected_trade_list": [
+      {
+        "time": "2026-09-01 00:00:00+00:00",
+        "symbol": "CLOIL",
+        "engine": "Convexity_v2",
+        "direction": "LONG",
+        "reason": "Convexity_v2 is HTF Compass Only; execution is disabled.",
+        "action": "COMPASS_ONLY_RECORDED"
+      },
+      {
+        "time": "2026-09-02 00:00:00+00:00",
+        "symbol": "USDCHF",
+        "engine": "Convexity_v2",
+        "direction": "LONG",
+        "reason": "Convexity_v2 is HTF Compass Only; execution is disabled.",
+        "action": "COMPASS_ONLY_RECORDED"
+      },
+      {
+        "time": "2026-09-07 00:00:00+00:00",
+        "symbol": "USDJPY",
+        "engine": "Convexity_v2",
+        "direction": "SHORT",
+        "reason": "Convexity_v2 is HTF Compass Only; execution is disabled.",
+        "action": "COMPASS_ONLY_RECORDED"
+      },
+      {
+        "time": "2026-09-11 00:00:00+00:00",
+        "symbol": "SILVER",
+        "engine": "Convexity_v2",
+        "direction": "SHORT",
+        "reason": "Convexity_v2 is HTF Compass Only; execution is disabled.",
+        "action": "COMPASS_ONLY_RECORDED"
+      },
+      {
+        "time": "2026-09-11 00:00:00+00:00",
+        "symbol": "ETHUSD",
+        "engine": "Convexity_v2",
+        "direction": "LONG",
+        "reason": "Convexity_v2 is HTF Compass Only; execution is disabled.",
+        "action": "COMPASS_ONLY_RECORDED"
+      },
+      {
+        "time": "2026-09-18 00:00:00+00:00",
+        "symbol": "GBPUSD",
+        "engine": "Convexity_v2",
+        "direction": "SHORT",
+        "reason": "Convexity_v2 is HTF Compass Only; execution is disabled.",
+        "action": "COMPASS_ONLY_RECORDED"
+      },
+      {
+        "time": "2026-09-18 00:00:00+00:00",
+        "symbol": "SOLUSD",
+        "engine": "Convexity_v2",
+        "direction": "LONG",
+        "reason": "Convexity_v2 is HTF Compass Only; execution is disabled.",
+        "action": "COMPASS_ONLY_RECORDED"
+      },
+      {
+        "time": "2026-09-21 00:00:00+00:00",
+        "symbol": "NAS100",
+        "engine": "Convexity_v2",
+        "direction": "LONG",
+        "reason": "Convexity_v2 is HTF Compass Only; execution is disabled.",
+        "action": "COMPASS_ONLY_RECORDED"
+      },
+      {
+        "time": "2026-09-21 00:00:00+00:00",
+        "symbol": "ETHUSD",
+        "engine": "Convexity_v2",
+        "direction": "LONG",
+        "reason": "Convexity_v2 is HTF Compass Only; execution is disabled.",
+        "action": "COMPASS_ONLY_RECORDED"
+      },
+      {
+        "time": "2026-09-25 17:15:00+00:00",
+        "symbol": "NAS100",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (1.70R) exceeds limit (1.50R) [Current: 0.85R, New: 0.85R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-09-25 17:45:00+00:00",
+        "symbol": "NAS100",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (1.70R) exceeds limit (1.50R) [Current: 0.85R, New: 0.85R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-09-30 14:00:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (1.96R) exceeds limit (1.50R) [Current: 0.85R, New: 1.10R]",
+        "action": "FIREWALL_BLOCKED"
+      }
+    ]
+  },
+  {
+    "window": "\u0130\u00e7inde Bulundu\u011fumuz Ay (Ekim 2026 MTD: 01 Eki - 21 Eki)",
+    "total_signals": 64,
+    "executed_trades": 30,
+    "rejected_signals": 34,
+    "win_count": 15,
+    "loss_count": 12,
+    "win_rate_pct": 50.0,
+    "net_r": 5.02,
+    "expectancy_r": 0.167,
+    "profit_factor": 1.49,
+    "max_drawdown_r": 2.91,
+    "annualized_sharpe": 3.71,
+    "engine_breakdown": {
+      "Stigma": {
+        "trades": 7,
+        "wins": 2,
+        "losses": 5,
+        "net_r": -2.93790302373273
+      },
+      "Trawma": {
+        "trades": 12,
+        "wins": 7,
+        "losses": 5,
+        "net_r": 3.063641934962842
+      },
+      "Begonya00": {
+        "trades": 11,
+        "wins": 6,
+        "losses": 2,
+        "net_r": 4.89
+      }
+    },
+    "executed_trade_list": [
+      {
+        "time": "2026-10-01 12:00:00+00:00",
+        "symbol": "NAS100",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -0.25,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-02 21:00:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 0.14,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-06 15:30:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": 1.07,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-08 13:15:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -1.06,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-08 14:00:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 0.25,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-12 10:00:30.376064+00:00",
+        "symbol": "NZDUSD",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "risk_r": 1.0,
+        "net_r": 2.0,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-12 10:16:03.528630+00:00",
+        "symbol": "CHFJPY",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "risk_r": 1.0,
+        "net_r": 2.0,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-13 17:30:00+00:00",
+        "symbol": "NAS100",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": 0.53,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-14 13:45:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -1.02,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-15 06:45:00+00:00",
+        "symbol": "USDJPY",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": -0.93,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-15 14:00:00+00:00",
+        "symbol": "USDJPY",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": -0.95,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-16 17:01:52.374704+00:00",
+        "symbol": "AUDCHF",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "risk_r": 1.0,
+        "net_r": 0.53,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-16 18:02:23.270600+00:00",
+        "symbol": "AUDCHF",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "risk_r": 1.0,
+        "net_r": 0.54,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-17 13:01:15.022473+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "risk_r": 1.0,
+        "net_r": 0.94,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-18 12:01:31.818304+00:00",
+        "symbol": "XRPUSD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "risk_r": 1.0,
+        "net_r": 0.88,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-18 16:00:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -0.97,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-18 19:45:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 1.28,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-19 11:16:26.808858+00:00",
+        "symbol": "AUDCHF",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "risk_r": 1.0,
+        "net_r": -1.0,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-19 14:15:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": 1.27,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-20 10:15:00+00:00",
+        "symbol": "USDJPY",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "risk_r": 0.425,
+        "net_r": -0.49,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-20 10:15:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": -0.85,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-20 12:15:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 1.27,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-20 13:45:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "risk_r": 0.85,
+        "net_r": 1.28,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-20 14:15:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": 1.28,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-20 15:00:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": -0.85,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-21 09:30:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "risk_r": 0.85,
+        "net_r": -0.85,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-21 10:01:25.357580+00:00",
+        "symbol": "CHFJPY",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "risk_r": 1.0,
+        "net_r": 0.0,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-21 12:47:02.345847+00:00",
+        "symbol": "CADCHF",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "risk_r": 1.0,
+        "net_r": 0.0,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-21 14:31:41.191585+00:00",
+        "symbol": "GBPCHF",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "risk_r": 1.0,
+        "net_r": 0.0,
+        "action": "PROCEED"
+      },
+      {
+        "time": "2026-10-21 17:47:00.913511+00:00",
+        "symbol": "CHFJPY",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "risk_r": 1.0,
+        "net_r": -1.0,
+        "action": "PROCEED"
+      }
+    ],
+    "rejected_trade_list": [
+      {
+        "time": "2026-10-02 21:00:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (1.96R) exceeds limit (1.50R) [Current: 0.85R, New: 1.10R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-12 10:30:59.272189+00:00",
+        "symbol": "USDCAD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.00R) exceeds max daily budget (2.50R). [Realized: 0.00R, Open SL: 2.00R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-12 11:45:54.062948+00:00",
+        "symbol": "GBPUSD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.00R) exceeds max daily budget (2.50R). [Realized: 0.00R, Open SL: 2.00R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-12 14:00:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Stigma",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (2.85R) exceeds max daily budget (2.50R). [Realized: 0.00R, Open SL: 2.00R, New: 0.85R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-13 07:15:00+00:00",
+        "symbol": "USDJPY",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: JPY cluster exposure (1.85R) exceeds limit (1.50R) [Current: 1.00R, New: 0.85R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-13 11:15:00+00:00",
+        "symbol": "USDJPY",
+        "engine": "Stigma",
+        "direction": "SHORT",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: JPY cluster exposure (1.85R) exceeds limit (1.50R) [Current: 1.00R, New: 0.85R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-14 00:00:00+00:00",
+        "symbol": "USDCHF",
+        "engine": "Convexity_v2",
+        "direction": "LONG",
+        "reason": "Convexity_v2 is HTF Compass Only; execution is disabled.",
+        "action": "COMPASS_ONLY_RECORDED"
+      },
+      {
+        "time": "2026-10-15 14:15:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (2.63R) exceeds max daily budget (2.50R). [Realized: 0.93R, Open SL: 0.85R, New: 0.85R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-17 13:03:17.986065+00:00",
+        "symbol": "SOLUSD",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (2.00R) exceeds limit (1.50R) [Current: 1.00R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-17 13:32:13.653111+00:00",
+        "symbol": "LTCUSD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (2.00R) exceeds limit (1.50R) [Current: 1.00R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-17 17:35:29.137469+00:00",
+        "symbol": "SOLUSD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (2.00R) exceeds limit (1.50R) [Current: 1.00R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-17 17:45:51.691300+00:00",
+        "symbol": "ETHUSD",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (2.00R) exceeds limit (1.50R) [Current: 1.00R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-18 12:15:59.591719+00:00",
+        "symbol": "SOLUSD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (2.00R) exceeds limit (1.50R) [Current: 1.00R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-18 18:28:34.632622+00:00",
+        "symbol": "LTCUSD",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (1.85R) exceeds limit (1.50R) [Current: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-19 12:00:35.456519+00:00",
+        "symbol": "GBPUSD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (2.85R) exceeds max daily budget (2.50R). [Realized: 0.00R, Open SL: 1.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-19 14:32:14.359126+00:00",
+        "symbol": "NZDCAD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (2.85R) exceeds max daily budget (2.50R). [Realized: 1.00R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-19 16:15:54.374022+00:00",
+        "symbol": "GBPUSD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (2.85R) exceeds max daily budget (2.50R). [Realized: 1.00R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-19 16:31:02.696033+00:00",
+        "symbol": "GBPCHF",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (2.85R) exceeds max daily budget (2.50R). [Realized: 1.00R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-19 18:02:37.845661+00:00",
+        "symbol": "NZDCAD",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (2.85R) exceeds max daily budget (2.50R). [Realized: 1.00R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 12:17:13.421788+00:00",
+        "symbol": "GBPCHF",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 13:00:24.556357+00:00",
+        "symbol": "EURUSD",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 13:46:22.925486+00:00",
+        "symbol": "CHFJPY",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 16:00:24.757453+00:00",
+        "symbol": "CADCHF",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 16:02:48.027120+00:00",
+        "symbol": "NZDCAD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 17:16:38.438160+00:00",
+        "symbol": "AUDCAD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 17:17:36.062206+00:00",
+        "symbol": "AUDCHF",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 17:18:09.319742+00:00",
+        "symbol": "CHFJPY",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 18:17:34.839647+00:00",
+        "symbol": "NZDCAD",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 18:48:18.956484+00:00",
+        "symbol": "XAUUSD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.19R) exceeds max daily budget (2.50R). [Realized: 1.34R, Open SL: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-20 21:30:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (3.04R) exceeds max daily budget (2.50R). [Realized: 2.19R, Open SL: 0.00R, New: 0.85R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-21 10:31:58.239209+00:00",
+        "symbol": "XAUUSD",
+        "engine": "Begonya00",
+        "direction": "LONG",
+        "reason": "FIREWALL_CLUSTER_CAP_EXCEEDED: USD cluster exposure (1.85R) exceeds limit (1.50R) [Current: 0.85R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-21 13:30:00+00:00",
+        "symbol": "BTCUSD",
+        "engine": "Trawma",
+        "direction": "SHORT",
+        "reason": "Live signal age is invalid or exceeds 900s. Metrics={'stop_distance': 192.89999999999418, 'tp1_rr': 1.0, 'tp2_rr': 2.0, 'spread_to_sl_ratio': None, 'entry_drift_r': None, 'signal_age_seconds': 20618.76}",
+        "action": "QUALITY_STALE_SIGNAL"
+      },
+      {
+        "time": "2026-10-21 14:46:59.186919+00:00",
+        "symbol": "CADCHF",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (2.85R) exceeds max daily budget (2.50R). [Realized: 0.85R, Open SL: 1.00R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      },
+      {
+        "time": "2026-10-21 18:31:08.547851+00:00",
+        "symbol": "CADCHF",
+        "engine": "Begonya00",
+        "direction": "SHORT",
+        "reason": "FIREWALL_DAILY_BUDGET_FULL: Potential daily loss (2.85R) exceeds max daily budget (2.50R). [Realized: 1.85R, Open SL: 0.00R, New: 1.00R]",
+        "action": "FIREWALL_BLOCKED"
+      }
+    ]
+  }
+]

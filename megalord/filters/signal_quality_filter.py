@@ -10,7 +10,7 @@ import math
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Set
 
-from megalord.types import StrategyRegime, TradeSignal
+from megalord.types import StrategyRegime, TradeSignal, GLOBAL_EXECUTION_WHITELIST
 
 
 @dataclass
@@ -43,10 +43,15 @@ class SignalQualityFilter:
         weekend_cfg = cfg.get("weekend_trading", {})
         self.weekend_filter_enabled = bool(weekend_cfg.get("enabled", True))
         default_crypto = {
-            "XRPUSD", "BTCUSD", "ETHUSD", "LTCUSD", "SOLUSD", "DOGUSD", "BTCEUR", "ETHEUR"
+            "XRPUSD", "BTCUSD", "ETHUSD", "LTCUSD", "SOLUSD", "DOGUSD", "BTCEUR", "ETHEUR",
+            "AAVEUSD", "ADAUSD", "APTUSD", "ARBUSD", "ARKMUSD", "AVAXUSD", "BCHUSD", "BONKUSD",
+            "CHZUSD", "DASHUSD", "DOTUSD", "FETUSD", "FLOKIUSD", "GALAUSD", "INJUSD", "IOUSD",
+            "LINKUSD", "NEARUSD", "OPUSD", "PENDLEUSD", "PENGUUSD", "PEPEUSD", "RENDERUSD",
+            "RVNUSD", "SANDUSD", "SEIUSD", "SHIBUSD", "SUIUSD", "TAOUSD", "UNIUSD", "VIRTUALUSD",
+            "WIFUSD", "WLDUSD", "DOGEUSD",
         }
         allowed = weekend_cfg.get("allowed_symbols")
-        self.weekend_allowed_symbols: Set[str] = set(allowed) if allowed else default_crypto
+        self.weekend_allowed_symbols: Set[str] = (set(allowed) | default_crypto) if allowed else default_crypto
         self.weekend_friday_close_hour = int(weekend_cfg.get("friday_close_hour_utc", 21))
         self.weekend_sunday_open_hour = int(weekend_cfg.get("sunday_open_hour_utc", 21))
 
@@ -57,6 +62,12 @@ class SignalQualityFilter:
             return math.isfinite(number) and number > 0
         except (TypeError, ValueError):
             return False
+
+    @staticmethod
+    def _below_rr(value: float, minimum: float) -> bool:
+        # Subtraction of nearby prices can represent an exact 1R target as
+        # 0.99999999999994. Preserve the threshold, tolerate only roundoff.
+        return value < minimum and not math.isclose(value, minimum, rel_tol=1e-12, abs_tol=1e-12)
 
     @staticmethod
     def _age_seconds(signal: TradeSignal) -> Optional[float]:
@@ -114,6 +125,26 @@ class SignalQualityFilter:
         if direction not in ("LONG", "SHORT"):
             return SignalQualityResult(False, 0, "QUALITY_INVALID_DIRECTION", f"Unsupported direction: {signal.direction!r}.", metrics)
 
+        # 0. Pre-Execution Institutional Whitelist Gate
+        norm_sym = str(signal.symbol).upper().replace("/", "").replace("-", "").replace("_", "").strip()
+        if GLOBAL_EXECUTION_WHITELIST is not None and norm_sym not in GLOBAL_EXECUTION_WHITELIST:
+            return SignalQualityResult(
+                False, 0, "QUALITY_UNWHITELISTED_SYMBOL",
+                f"Symbol {signal.symbol} ({norm_sym}) is strictly prohibited by institutional execution whitelist."
+            )
+
+        # 0b. Egzotik Çapraz Parite Engeli (Yalnızca Majörler, Altın, Endeksler ve Lider Kriptolar)
+        EXOTIC_CROSSES = {
+            "NZDCAD", "GBPAUD", "NZDCHF", "CADCHF", "EURGBP", "GBPJPY", "EURJPY", "CHFJPY",
+            "AUDJPY", "CADJPY", "NZDJPY", "EURAUD", "EURCAD", "EURNZD", "GBPCAD", "GBPNZD",
+            "AUDCAD", "AUDCHF", "AUDNZD"
+        }
+        if norm_sym in EXOTIC_CROSSES:
+            return SignalQualityResult(
+                False, 0, "EXOTIC_CROSS_EXCLUDED",
+                f"Egzotik çapraz parite ({signal.symbol}) portföy risk politikası gereği devre dışı bırakılmıştır."
+            )
+
         # 0. Weekend Session Gate: When FX/Indices are closed, ONLY 24/7 Crypto is permitted
         if self.is_weekend_session(now_utc):
             norm_sym = signal.symbol.upper().replace("/", "").replace("-", "").replace("_", "").strip()
@@ -155,7 +186,7 @@ class SignalQualityFilter:
                     return SignalQualityResult(False, 0, "QUALITY_INVALID_TP1_SIDE", "TP1 is not on the profit side of entry.", {"tp1_price": float(tp1)})
                 rr1 = reward1 / stop_dist
                 metrics["tp1_rr"] = round(rr1, 4)
-                if rr1 < self.min_tp1_rr:
+                if self._below_rr(rr1, self.min_tp1_rr):
                     return SignalQualityResult(False, 0, "QUALITY_LOW_TP1_RR", f"TP1 reward/risk {rr1:.2f} is below minimum {self.min_tp1_rr:.2f}.", metrics)
             else:
                 metrics["tp1_rr"] = None
@@ -167,7 +198,7 @@ class SignalQualityFilter:
                     return SignalQualityResult(False, 0, "QUALITY_INVALID_TP2_SIDE", "TP2 is not on the profit side of entry.", {"tp2_price": float(tp2)})
                 rr = reward / stop_dist
                 metrics["tp2_rr"] = round(rr, 4)
-                if rr < self.min_tp2_rr:
+                if self._below_rr(rr, self.min_tp2_rr):
                     return SignalQualityResult(False, 0, "QUALITY_LOW_TP2_RR", f"TP2 reward/risk {rr:.2f} is below minimum {self.min_tp2_rr:.2f}.", metrics)
             else:
                 metrics["tp2_rr"] = None
@@ -205,7 +236,7 @@ class SignalQualityFilter:
                         live_rew1 = (float(tp1) - cur_f) if direction == "LONG" else (cur_f - float(tp1))
                         live_rr1 = live_rew1 / live_stop_dist if live_stop_dist > 0 else 0.0
                         metrics["live_tp1_rr"] = round(live_rr1, 4)
-                        if live_rr1 < self.min_tp1_rr:
+                        if self._below_rr(live_rr1, self.min_tp1_rr):
                             return SignalQualityResult(False, 0, "QUALITY_LOW_LIVE_TP1_RR", f"Live TP1 R:R {live_rr1:.2f} from market price is below minimum {self.min_tp1_rr:.2f}.", metrics)
                 except (TypeError, ValueError):
                     return SignalQualityResult(False, 0, "QUALITY_INVALID_CURRENT_PRICE", "Current-price metadata is invalid.", metrics)

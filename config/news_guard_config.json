@@ -3,11 +3,19 @@
   "default_freeze_minutes_after": 5,
   "scheduled_events": [
     {
+      "id": "USD_FOMC Member Barr Speaks",
+      "name": "FOMC Member Barr Speaks",
+      "currency": "USD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-16T05:00:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
       "id": "CAD_CPI m/m",
       "name": "CPI m/m",
       "currency": "CAD",
       "impact": "CRITICAL",
-      "event_time_utc": "2026-10-19T08:30:00-04:00",
+      "event_time_utc": "2026-11-16T08:30:00-05:00",
       "affects_all_symbols": false
     },
     {
@@ -15,7 +23,7 @@
       "name": "Median CPI y/y",
       "currency": "CAD",
       "impact": "CRITICAL",
-      "event_time_utc": "2026-10-19T08:30:00-04:00",
+      "event_time_utc": "2026-11-16T08:30:00-05:00",
       "affects_all_symbols": false
     },
     {
@@ -23,7 +31,7 @@
       "name": "Trimmed CPI y/y",
       "currency": "CAD",
       "impact": "CRITICAL",
-      "event_time_utc": "2026-10-19T08:30:00-04:00",
+      "event_time_utc": "2026-11-16T08:30:00-05:00",
       "affects_all_symbols": false
     },
     {
@@ -31,7 +39,7 @@
       "name": "Common CPI y/y",
       "currency": "CAD",
       "impact": "HIGH",
-      "event_time_utc": "2026-10-19T08:30:00-04:00",
+      "event_time_utc": "2026-11-16T08:30:00-05:00",
       "affects_all_symbols": false
     },
     {
@@ -39,7 +47,111 @@
       "name": "Core CPI m/m",
       "currency": "CAD",
       "impact": "HIGH",
-      "event_time_utc": "2026-10-19T08:30:00-04:00",
+      "event_time_utc": "2026-11-16T08:30:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_FOMC Member Williams Speaks",
+      "name": "FOMC Member Williams Speaks",
+      "currency": "USD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-16T09:05:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_Fed Chairman Warsh Speaks",
+      "name": "Fed Chairman Warsh Speaks",
+      "currency": "USD",
+      "impact": "CRITICAL",
+      "event_time_utc": "2026-11-16T12:00:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_FOMC Member Hammack Speaks",
+      "name": "FOMC Member Hammack Speaks",
+      "currency": "USD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-16T14:15:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "AUD_RBA Gov Bullock Speaks",
+      "name": "RBA Gov Bullock Speaks",
+      "currency": "AUD",
+      "impact": "CRITICAL",
+      "event_time_utc": "2026-11-16T17:50:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_FOMC Member Barkin Speaks",
+      "name": "FOMC Member Barkin Speaks",
+      "currency": "USD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-16T18:10:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_FOMC Member Goolsbee Speaks",
+      "name": "FOMC Member Goolsbee Speaks",
+      "currency": "USD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-16T18:30:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "NZD_Inflation Expectations q/q",
+      "name": "Inflation Expectations q/q",
+      "currency": "NZD",
+      "impact": "CRITICAL",
+      "event_time_utc": "2026-11-16T21:00:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_FOMC Member Musalem Speaks",
+      "name": "FOMC Member Musalem Speaks",
+      "currency": "USD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-17T07:30:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_Core Retail Sales m/m",
+      "name": "Core Retail Sales m/m",
+      "currency": "USD",
+      "impact": "CRITICAL",
+      "event_time_utc": "2026-11-17T08:30:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_Retail Sales m/m",
+      "name": "Retail Sales m/m",
+      "currency": "USD",
+      "impact": "CRITICAL",
+      "event_time_utc": "2026-11-17T08:30:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_FOMC Member Waller Speaks",
+      "name": "FOMC Member Waller Speaks",
+      "currency": "USD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-17T09:10:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_FOMC Member Hammack Speaks",
+      "name": "FOMC Member Hammack Speaks",
+      "currency": "USD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-17T09:30:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_FOMC Member Williams Speaks",
+      "name": "FOMC Member Williams Speaks",
+      "currency": "USD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-17T14:25:00-05:00",
       "affects_all_symbols": false
     },
     {
@@ -47,7 +159,7 @@
       "name": "CPI y/y",
       "currency": "GBP",
       "impact": "CRITICAL",
-      "event_time_utc": "2026-10-21T02:00:00-04:00",
+      "event_time_utc": "2026-11-18T02:00:00-05:00",
       "affects_all_symbols": false
     },
     {
@@ -55,15 +167,127 @@
       "name": "Core CPI y/y",
       "currency": "GBP",
       "impact": "HIGH",
-      "event_time_utc": "2026-10-21T02:00:00-04:00",
+      "event_time_utc": "2026-11-18T02:00:00-05:00",
       "affects_all_symbols": false
     },
     {
-      "id": "NZD_CPI q/q",
-      "name": "CPI q/q",
-      "currency": "NZD",
+      "id": "EUR_Final Core CPI y/y",
+      "name": "Final Core CPI y/y",
+      "currency": "EUR",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-18T05:00:00-05:00",
+      "affects_all_symbols": true
+    },
+    {
+      "id": "EUR_Final CPI y/y",
+      "name": "Final CPI y/y",
+      "currency": "EUR",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-18T05:00:00-05:00",
+      "affects_all_symbols": true
+    },
+    {
+      "id": "GBP_BOE Gov Bailey Speaks",
+      "name": "BOE Gov Bailey Speaks",
+      "currency": "GBP",
       "impact": "CRITICAL",
-      "event_time_utc": "2026-10-21T17:45:00-04:00",
+      "event_time_utc": "2026-11-18T10:00:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_FOMC Member Daly Speaks",
+      "name": "FOMC Member Daly Speaks",
+      "currency": "USD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-18T12:15:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_FOMC Member Barr Speaks",
+      "name": "FOMC Member Barr Speaks",
+      "currency": "USD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-18T13:35:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_FOMC Meeting Minutes",
+      "name": "FOMC Meeting Minutes",
+      "currency": "USD",
+      "impact": "CRITICAL",
+      "event_time_utc": "2026-11-18T14:00:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_FOMC Member Williams Speaks",
+      "name": "FOMC Member Williams Speaks",
+      "currency": "USD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-18T14:30:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_FOMC Member Kashkari Speaks",
+      "name": "FOMC Member Kashkari Speaks",
+      "currency": "USD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-18T16:15:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "AUD_Employment Change",
+      "name": "Employment Change",
+      "currency": "AUD",
+      "impact": "CRITICAL",
+      "event_time_utc": "2026-11-18T19:30:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "AUD_Unemployment Rate",
+      "name": "Unemployment Rate",
+      "currency": "AUD",
+      "impact": "CRITICAL",
+      "event_time_utc": "2026-11-18T19:30:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_FOMC Member Hammack Speaks",
+      "name": "FOMC Member Hammack Speaks",
+      "currency": "USD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-19T08:50:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_FOMC Member Jefferson Speaks",
+      "name": "FOMC Member Jefferson Speaks",
+      "currency": "USD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-19T09:25:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_FOMC Member Goolsbee Speaks",
+      "name": "FOMC Member Goolsbee Speaks",
+      "currency": "USD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-19T12:30:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_FOMC Member Barr Speaks",
+      "name": "FOMC Member Barr Speaks",
+      "currency": "USD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-19T14:15:00-05:00",
+      "affects_all_symbols": false
+    },
+    {
+      "id": "USD_FOMC Member Barkin Speaks",
+      "name": "FOMC Member Barkin Speaks",
+      "currency": "USD",
+      "impact": "HIGH",
+      "event_time_utc": "2026-11-19T16:00:00-05:00",
       "affects_all_symbols": false
     },
     {
@@ -71,31 +295,31 @@
       "name": "National Core CPI y/y",
       "currency": "JPY",
       "impact": "HIGH",
-      "event_time_utc": "2026-10-22T19:30:00-04:00",
+      "event_time_utc": "2026-11-19T18:30:00-05:00",
       "affects_all_symbols": false
     },
     {
-      "id": "CHF_Daylight Saving Time Shift",
-      "name": "Daylight Saving Time Shift",
-      "currency": "CHF",
+      "id": "USD_FOMC Member Paulson Speaks",
+      "name": "FOMC Member Paulson Speaks",
+      "currency": "USD",
       "impact": "HIGH",
-      "event_time_utc": "2026-10-24T21:00:00-04:00",
+      "event_time_utc": "2026-11-19T18:30:00-05:00",
       "affects_all_symbols": false
     },
     {
-      "id": "EUR_Daylight Saving Time Shift",
-      "name": "Daylight Saving Time Shift",
-      "currency": "EUR",
+      "id": "USD_FOMC Member Waller Speaks",
+      "name": "FOMC Member Waller Speaks",
+      "currency": "USD",
       "impact": "HIGH",
-      "event_time_utc": "2026-10-24T21:00:00-04:00",
+      "event_time_utc": "2026-11-20T08:25:00-05:00",
       "affects_all_symbols": false
     },
     {
-      "id": "GBP_Daylight Saving Time Shift",
-      "name": "Daylight Saving Time Shift",
-      "currency": "GBP",
+      "id": "USD_FOMC Member Cook Speaks",
+      "name": "FOMC Member Cook Speaks",
+      "currency": "USD",
       "impact": "HIGH",
-      "event_time_utc": "2026-10-24T21:00:00-04:00",
+      "event_time_utc": "2026-11-20T12:15:00-05:00",
       "affects_all_symbols": false
     }
   ]

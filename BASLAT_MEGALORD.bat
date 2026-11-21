@@ -1,13 +1,13 @@
 @echo off
 chcp 65001 > nul
-title MEGALORD 24/7 MULTI-ENGINE COMMAND CENTER
+title MEGALORD 24/7 MULTI-ENGINE COMMAND CENTER (SHADOW ONLY)
 color 0A
 
 echo ===============================================================================
-echo            MEGALORD META-ALLOCATOR ^& 7-MOTORLU ORKESTRATOR (FAZ 4)
+echo            MEGALORD META-ALLOCATOR (THE 5%%ERS CANLI BAGLANTI KESILDI)
 echo ===============================================================================
 echo [1] Golge Mod (Shadow Paper Tracking - Guvenli Test)
-echo [2] MT5 Canli Mod (Gercek Emir Iletimi)
+echo [2] MT5 Canli Mod [DEVRE DISI BIRAKILDI]
 echo [3] Tek Dongu Analizi (--once)
 echo [4] Cikis
 echo ===============================================================================
@@ -18,8 +18,7 @@ if "%choice%"=="1" (
     python megalord\megalord_daemon.py --mode shadow --watch --interval-sec 15
     pause
 ) else if "%choice%"=="2" (
-    echo [UYARI] MT5 CANLI MOD SECILDI! Gercek emir iletimi baslatiliyor...
-    python megalord\megalord_daemon.py --mode mt5_live --watch --interval-sec 15
+    echo [ENGEL] The 5%%ers canli emir iletimi kalici olarak devre disi birakilmistir!
     pause
 ) else if "%choice%"=="3" (
     echo [BILGI] Tek Dongu Calistiriliyor...

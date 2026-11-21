@@ -6,6 +6,7 @@ import math
 import time
 from decimal import Decimal
 from typing import Dict, Any, Optional
+from megalord.types import GLOBAL_EXECUTION_WHITELIST
 
 try:
     import MetaTrader5 as mt5
@@ -15,14 +16,22 @@ except ImportError:  # Allows unit-testing pure sizing decisions off Windows/MT5
 logger = logging.getLogger("Megalord.MT5Executor")
 MEGALORD_MAGIC_NUMBER = 202699
 
+# Pre-submission execution whitelist (None = All symbols allowed)
+GLOBAL_EXECUTION_WHITELIST = None
+
+LIVE_EXECUTION_HARD_DISABLED = True
+
 
 class MegalordMT5Executor:
-    def __init__(self, target_account: int = 26735345, base_risk_pct: float = 0.50):
-        self.target_account = target_account
+    def __init__(self, target_account: int = 0, base_risk_pct: float = 0.50):
+        self.target_account = 0  # Hard-severed from The 5%ers (#26735345)
         self.base_risk_pct = float(base_risk_pct)
         self.magic = MEGALORD_MAGIC_NUMBER
 
     def ensure_connected(self) -> bool:
+        if LIVE_EXECUTION_HARD_DISABLED or int(self.target_account) in (0, 26735345):
+            logger.critical("LIVE EXECUTION HARD-DISABLED: The 5%%ers connection is severed. Refusing MT5 connection.")
+            return False
         if mt5 is None:
             logger.error("MetaTrader5 package is unavailable; live execution is disabled.")
             return False
@@ -230,6 +239,10 @@ class MegalordMT5Executor:
         """Return a fresh broker quote for pre-trade spread and entry-drift checks."""
         if not self.ensure_connected():
             return None
+        norm_sym = symbol.upper().replace("/", "").replace("-", "").replace("_", "").strip()
+        if GLOBAL_EXECUTION_WHITELIST is not None and norm_sym not in GLOBAL_EXECUTION_WHITELIST:
+            logger.critical("FINAL FIREWALL VETO: Refusing to place market order for unwhitelisted symbol %s!", symbol)
+            return None
         sym_info, tick = self._prepare_symbol_and_tick(symbol)
         if not sym_info or not tick:
             return None
@@ -280,6 +293,10 @@ class MegalordMT5Executor:
     ) -> Optional[Dict[str, Any]]:
         if not self.ensure_connected():
             return None
+        norm_sym = symbol.upper().replace("/", "").replace("-", "").replace("_", "").strip()
+        if GLOBAL_EXECUTION_WHITELIST is not None and norm_sym not in GLOBAL_EXECUTION_WHITELIST:
+            logger.critical("FINAL FIREWALL VETO: Refusing to place market order for unwhitelisted symbol %s!", symbol)
+            return None
         sym_info, tick = self._prepare_symbol_and_tick(symbol)
         if not sym_info or not tick:
             return None
@@ -316,6 +333,10 @@ class MegalordMT5Executor:
     ) -> Optional[Dict[str, Any]]:
         """Place two risk-budgeted legs when both can meet broker minimum volume."""
         if not self.ensure_connected():
+            return None
+        norm_sym = symbol.upper().replace("/", "").replace("-", "").replace("_", "").strip()
+        if GLOBAL_EXECUTION_WHITELIST is not None and norm_sym not in GLOBAL_EXECUTION_WHITELIST:
+            logger.critical("FINAL FIREWALL VETO: Refusing to place market order for unwhitelisted symbol %s!", symbol)
             return None
         sym_info, tick = self._prepare_symbol_and_tick(symbol)
         if not sym_info or not tick:
@@ -537,8 +558,9 @@ class MegalordMT5Executor:
         return False
 
     def _send_single_deal(self, symbol: str, order_type: int, price: float, volume: float, sl: float, tp: float, comment: str) -> Optional[Dict[str, Any]]:
-        if mt5 is None or not math.isfinite(float(volume)) or float(volume) <= 0:
-            return None
+        # GLOBAL USER MANDATE: Real order execution is permanently forbidden across all engines
+        logger.critical("GERCEK_ISLEM_ENGELI_AKTIF: Megalord gercek emir gonderimi kalici olarak kilitlenmistir!")
+        return None
         request = {
             "action": mt5.TRADE_ACTION_DEAL, "symbol": symbol, "volume": float(volume),
             "type": order_type, "price": float(price), "sl": float(sl), "tp": float(tp),
@@ -574,6 +596,45 @@ class MegalordMT5Executor:
         logger.info("Live order placed with verified SL: ticket=%s symbol=%s lot=%s price=%s SL=%s", result.order, symbol, volume, executed_price, sl)
         return {"ticket": result.order, "deal": result.deal, "volume": float(volume), "price": executed_price, "sl_verified": True}
 
+    def close_position(self, ticket: int, comment: str = "MGL_CLOSE") -> tuple[bool, str]:
+        """Closes an open MT5 position by ticket using TRADE_ACTION_DEAL. Returns (success, detail)."""
+        if not self.ensure_connected():
+            return False, "MT5 terminal not connected"
+        pos = self.get_open_position(ticket)
+        if pos is None:
+            return True, f"Position #{ticket} already closed"
+        symbol = str(pos.symbol)
+        tick = mt5.symbol_info_tick(symbol)
+        if not tick:
+            return False, f"No live price tick for {symbol}"
+        pos_type = int(pos.type)
+        is_buy = (pos_type == int(mt5.POSITION_TYPE_BUY))
+        close_type = mt5.ORDER_TYPE_SELL if is_buy else mt5.ORDER_TYPE_BUY
+        close_price = float(tick.bid if is_buy else tick.ask)
+        req = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "position": int(ticket),
+            "symbol": symbol,
+            "volume": float(pos.volume),
+            "type": close_type,
+            "price": close_price,
+            "deviation": 25,
+            "magic": self.magic,
+            "comment": comment[:31],
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_IOC,
+        }
+        res = mt5.order_send(req)
+        if res is None or res.retcode != mt5.TRADE_RETCODE_DONE:
+            req["type_filling"] = mt5.ORDER_FILLING_FOK
+            res = mt5.order_send(req)
+        if res is None or res.retcode != mt5.TRADE_RETCODE_DONE:
+            err = res.comment if res else str(mt5.last_error())
+            logger.critical("CLOSE_POSITION FAILED ticket=%s symbol=%s err=%s", ticket, symbol, err)
+            return False, f"Broker rejected order: {err}"
+        logger.info("CLOSE_POSITION SUCCESS ticket=%s symbol=%s price=%s comment=%s", ticket, symbol, res.price, comment)
+        return True, f"Closed at {res.price}"
+
     def modify_position_sl(self, ticket: int, symbol: str, new_sl: float, current_tp: float = 0.0) -> bool:
         if not self.ensure_connected():
             return False
@@ -604,30 +665,23 @@ class MegalordMT5Executor:
         if not self.ensure_connected():
             return None
         deals = mt5.history_deals_get(position=int(position_id))
-        if deals:
-            # MT5 exit deals commonly have entry == 1.
-            for deal in reversed(deals):
-                if deal.entry == 1:
-                    gross_p = float(getattr(deal, "profit", 0.0) or 0.0)
-                    comm = float(getattr(deal, "commission", 0.0) or 0.0)
-                    swap = float(getattr(deal, "swap", 0.0) or 0.0)
-                    return {
-                        "ticket": deal.ticket,
-                        "order": deal.order,
-                        "profit": gross_p + comm + swap,
-                        "gross_profit": gross_p,
-                        "commission": comm,
-                        "swap": swap,
-                        "price": deal.price,
-                        "comment": deal.comment,
-                        "time": deal.time,
-                    }
+        from megalord.live.deal_accounting import summarize_closed_position
+        return summarize_closed_position(deals or (), position_id)
+
+    def get_one_r_cash_verified(self) -> Optional[float]:
+        """Return a measured reference, never the legacy display fallback."""
+        if self.ensure_connected():
+            acc = mt5.account_info()
+            if acc and math.isfinite(float(getattr(acc, "equity", 0.0))) and float(acc.equity) > 0:
+                value = float(acc.equity) * (self.base_risk_pct / 100.0)
+                if math.isfinite(value) and value > 0:
+                    return value
         return None
 
     def get_one_r_cash(self) -> float:
-        """Return the current 1.0R cash value based on live account equity and base_risk_pct."""
-        if self.ensure_connected():
-            acc = mt5.account_info()
-            if acc and getattr(acc, "equity", 0.0) > 0:
-                return float(acc.equity) * (self.base_risk_pct / 100.0)
-        return 50.0
+        """Legacy display reference. Fallback must not certify entry risk."""
+        verified = self.get_one_r_cash_verified()
+        return verified if verified is not None else 50.0
+
+
+MT5Executor = MegalordMT5Executor

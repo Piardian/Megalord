@@ -48,3 +48,44 @@ class ArbiterDecision:
     reason: str
     confluent_engines: list[str] = field(default_factory=list)
     confluent_families: list[str] = field(default_factory=list)
+
+
+# The 5%ers Full Institutional Universe (64 Instruments: Forex, Commodities, Indices, Crypto)
+THE5ERS_ALL_SYMBOLS: set[str] = {
+    # Forex Majors & Crosses (28)
+    "EURUSD", "GBPUSD", "USDCHF", "USDJPY", "USDCAD", "AUDUSD", "AUDNZD", "AUDCAD", "AUDCHF", "AUDJPY",
+    "CADCHF", "CADJPY", "CHFJPY", "EURAUD", "EURCAD", "EURCHF", "EURGBP", "EURJPY", "EURNZD",
+    "GBPCHF", "GBPJPY", "GBPAUD", "GBPCAD", "GBPNZD", "NZDCAD", "NZDCHF", "NZDJPY", "NZDUSD",
+    # Forex Exotics (7)
+    "USDBRL", "USDDKK", "USDHKD", "USDMXN", "USDNOK", "USDPLN", "USDZAR",
+    # Commodities / Metals / Energy (11)
+    "XAUUSD", "XAUEUR", "XAGUSD", "XAGEUR", "XPTUSD", "XPDUSD", "XTIUSD", "XBRUSD", "NGCUSD", "CUCUSD", "ASXAUD",
+    # Indices (10)
+    "DAX40", "ESXEUR", "F40EUR", "HSIHKD", "IBXEUR", "JPN225", "NAS100", "SP500", "UK100", "US30",
+    # 24/7 Crypto (8)
+    "BTCUSD", "BTCEUR", "ETHUSD", "ETHEUR", "SOLUSD", "LTCUSD", "DOGUSD", "XRPUSD",
+    # Binance pairs mapped to The 5%ers
+    "BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "LTCUSDT", "DOGEUSDT", "DOGEUSD"
+}
+
+# Makro Motorumuzun (Macro Engine & Gate) Desteklediği The 5%ers Pariteleri
+# Makro desteği olmayan (haritası veya yön filtresi bulunmayan) egzotikler ve desteklenmeyen enstrümanlar elenmiştir.
+THE5ERS_MACRO_SUPPORTED_SYMBOLS: set[str] = {
+    # Forex Majörler & Çaprazlar (21 Parite)
+    "EURUSD", "GBPUSD", "USDJPY", "USDCHF", "USDCAD", "AUDUSD", "NZDUSD",
+    "AUDCAD", "AUDCHF", "AUDJPY", "CADCHF", "CADJPY", "CHFJPY",
+    "EURAUD", "EURCHF", "EURGBP", "EURJPY", "GBPCHF", "GBPJPY",
+    "NZDCAD", "NZDCHF",
+    # Emtia (1 Enstrüman)
+    "XAUUSD",
+    # Endeks (1 Enstrüman)
+    "NAS100",
+    # 24/7 Kripto (6 Parite)
+    "BTCUSD", "ETHUSD", "SOLUSD", "LTCUSD", "DOGUSD", "XRPUSD",
+    # Binance eşlenikleri
+    "BTCUSDT", "ETHUSDT", "SOLUSDT", "LTCUSDT", "DOGEUSDT", "DOGEUSD", "XRPUSDT"
+}
+
+# Tum piyasalarda (Forex, Endeks, Emtia, The 5%ers ve Binance Altcoin'ler dahil tum kriptolarda)
+# maksimum islem ozgurlugu saglamak amaciyla Global Whitelist devre disi (None = Tum pariteler serbest).
+GLOBAL_EXECUTION_WHITELIST: Optional[set[str]] = None

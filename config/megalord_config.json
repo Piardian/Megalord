@@ -1,7 +1,7 @@
 {
   "system_name": "Megalord Meta-Allocator & Multi-Strategy Orchestrator",
   "version": "2.2.0",
-  "target_account": 26735345,
+  "target_account": 0,
   "telegram": {
     "bot_username": "Piardian_bot",
     "bot_token": "",
@@ -10,20 +10,18 @@
   },
   "risk_sizing": {
     "risk_basis": "equity",
-    "base_risk_pct": 0.50,
+    "base_risk_pct": 0.5,
     "require_order_calc_profit": true
   },
   "weekend_trading": {
     "enabled": true,
     "allowed_symbols": [
-      "XRPUSD",
-      "BTCUSD",
-      "ETHUSD",
-      "LTCUSD",
-      "SOLUSD",
-      "DOGUSD",
-      "BTCEUR",
-      "ETHEUR"
+      "XRPUSD", "BTCUSD", "ETHUSD", "LTCUSD", "SOLUSD", "DOGUSD", "BTCEUR", "ETHEUR",
+      "AAVEUSD", "ADAUSD", "APTUSD", "ARBUSD", "ARKMUSD", "AVAXUSD", "BCHUSD", "BONKUSD",
+      "CHZUSD", "DASHUSD", "DOTUSD", "FETUSD", "FLOKIUSD", "GALAUSD", "INJUSD", "IOUSD",
+      "LINKUSD", "NEARUSD", "OPUSD", "PENDLEUSD", "PENGUUSD", "PEPEUSD", "RENDERUSD",
+      "RVNUSD", "SANDUSD", "SEIUSD", "SHIBUSD", "SUIUSD", "TAOUSD", "UNIUSD", "VIRTUALUSD",
+      "WIFUSD", "WLDUSD", "DOGEUSD"
     ],
     "friday_close_hour_utc": 21,
     "sunday_open_hour_utc": 21
@@ -32,10 +30,10 @@
     "enabled": true,
     "max_signal_age_seconds": 900,
     "max_pending_limit_age_seconds": 14400,
-    "max_spread_to_sl_ratio": 0.10,
+    "max_spread_to_sl_ratio": 0.1,
     "max_entry_drift_r": 0.25,
-    "min_tp1_rr": 0.60,
-    "min_tp2_rr": 1.50,
+    "min_tp1_rr": 1.0,
+    "min_tp2_rr": 1.5,
     "min_score": 60,
     "require_sl": true,
     "require_entry": true,
@@ -44,29 +42,41 @@
   "firewall": {
     "max_daily_loss_pct": 2.5,
     "max_worst_case_exposure_pct": 2.5,
-    "max_global_heat_pct": 3.5,
+    "max_global_heat_pct": 4.5,
     "currency_cluster_caps": {
-      "USD": 1.5,
-      "JPY": 1.5,
-      "EUR": 1.5,
-      "GBP": 1.5,
-      "XAU": 1.5,
-      "INDEX": 1.5,
-      "CRYPTO": 1.5
+      "USD": 2.5,
+      "JPY": 2.0,
+      "EUR": 2.0,
+      "GBP": 2.0,
+      "XAU": 2.0,
+      "INDEX": 2.0,
+      "CRYPTO": 2.5
     }
   },
   "families": {
-    "FAMILY_SMC": ["Begonya00", "Begonya", "ChecklistTrigger"],
-    "FAMILY_MACRO_TREND": ["Convexity_v2"],
-    "FAMILY_AMT_VWAP": ["Pragma"],
-    "FAMILY_ORDERFLOW": ["Trawma"],
-    "FAMILY_STAT_QUANT": ["Stigma"]
+    "FAMILY_SMC": [
+      "Begonya00",
+      "Begonya",
+      "ChecklistTrigger"
+    ],
+    "FAMILY_MACRO_TREND": [
+      "Convexity_v2"
+    ],
+    "FAMILY_AMT_VWAP": [
+      "Pragma"
+    ],
+    "FAMILY_ORDERFLOW": [
+      "Trawma"
+    ],
+    "FAMILY_STAT_QUANT": [
+      "Stigma"
+    ]
   },
   "allocator": {
     "base_engine_weights": {
-      "Begonya00": 0.50,
+      "Begonya00": 0.45,
       "Begonya": 0.0,
-      "ChecklistTrigger": 0.50,
+      "ChecklistTrigger": 0.5,
       "Convexity_v2": 0.0,
       "Pragma": 0.45,
       "Trawma": 0.45,
@@ -81,12 +91,15 @@
       "Trawma": true,
       "Stigma": true
     },
-    "compass_only_engines": ["Convexity_v2"],
-    "orthogonal_confluence_multiplier": 1.30,
-    "clone_confluence_cap": 0.60,
-    "counter_trend_mean_reversion_multiplier": 0.50,
-    "begonya00_aplus_multiplier": 0.80,
+    "compass_only_engines": [
+      "Convexity_v2"
+    ],
+    "orthogonal_confluence_multiplier": 1.3,
+    "clone_confluence_cap": 0.6,
+    "counter_trend_mean_reversion_multiplier": 0.5,
+    "begonya00_aplus_multiplier": 0.8,
     "consecutive_loss_cooldown_threshold": 3,
-    "consecutive_loss_cooldown_multiplier": 0.50
-  }
+    "consecutive_loss_cooldown_multiplier": 0.5
+  },
+  "live_execution_disabled": true
 }

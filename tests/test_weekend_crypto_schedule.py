@@ -69,7 +69,9 @@ def test_weekend_filter_rejects_forex_metals_indices():
         )
         res = sqf.evaluate(sig, now_utc=saturday_noon)
         assert not res.allowed
-        assert res.action == "QUALITY_WEEKEND_MARKET_CLOSED"
+        # CHFJPY is rejected even earlier by the permanent execution whitelist.
+        expected = "QUALITY_UNWHITELISTED_SYMBOL" if closed_sym == "CHFJPY" else "QUALITY_WEEKEND_MARKET_CLOSED"
+        assert res.action == expected
         assert closed_sym in res.reason
 
 

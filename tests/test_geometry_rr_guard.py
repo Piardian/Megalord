@@ -138,6 +138,7 @@ def test_arbiter_applies_grade_scaling_for_begonya00_aplus():
         tp2_price=1.0850,
         metadata={"grade": "A+ (2/3)", "pool_type": "PDL"},
     )
-    dec = arb.evaluate_signal(sig_aplus, active_positions=[], allow_historical=True)
+    # Isolate grade scaling under the already-required verified range regime.
+    dec = arb.evaluate_signal(sig_aplus, active_positions=[], macro_htf_bias="NATURAL_BAND", now_utc=now_utc)
     assert dec.allowed
     assert dec.final_risk_mult == 0.80

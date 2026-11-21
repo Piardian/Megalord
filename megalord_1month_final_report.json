@@ -1,0 +1,301 @@
+{
+  "period": "1 Ayl\u0131k (21 Eyl\u00fcl 2026 - 21 Ekim 2026)",
+  "total_signals_received": 43,
+  "executed_trades_count": 29,
+  "rejected_signals_count": 14,
+  "win_count": 15,
+  "loss_count": 14,
+  "break_even_count": 0,
+  "win_rate_pct": 51.7,
+  "net_r": 1.34,
+  "expectancy_r": 0.046,
+  "profit_factor": 1.22,
+  "max_drawdown_r": 1.46,
+  "annualized_sharpe": 1.69,
+  "engine_breakdown": {
+    "Trawma": {
+      "trades": 23,
+      "wins": 13,
+      "losses": 10,
+      "be": 0,
+      "net_r": 2.2664244852282818
+    },
+    "Stigma": {
+      "trades": 6,
+      "wins": 2,
+      "losses": 4,
+      "be": 0,
+      "net_r": -0.9258280204906396
+    }
+  },
+  "rejection_breakdown": {
+    "COMPASS_ONLY_RECORDED": 3,
+    "ENGINE_DISABLED": 3,
+    "NATURAL_BAND_REQUIRED": 3,
+    "HTF_CONFLICT_VETO": 4,
+    "QUALITY_STALE_SIGNAL": 1
+  },
+  "trades": [
+    {
+      "time": "2026-09-21 14:15:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "SHORT",
+      "risk_r": 0.45,
+      "net_r": -0.53,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-09-22 14:30:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "SHORT",
+      "risk_r": 0.45,
+      "net_r": 0.13,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-09-23 18:00:00+00:00",
+      "symbol": "NAS100",
+      "engine": "Trawma",
+      "direction": "LONG",
+      "risk_r": 0.45,
+      "net_r": -0.55,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-09-24 10:15:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "LONG",
+      "risk_r": 0.45,
+      "net_r": 0.58,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-09-25 16:15:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "LONG",
+      "risk_r": 0.45,
+      "net_r": -0.03,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-09-29 16:30:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "LONG",
+      "risk_r": 0.45,
+      "net_r": -0.54,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-09-29 20:15:00+00:00",
+      "symbol": "NAS100",
+      "engine": "Trawma",
+      "direction": "LONG",
+      "risk_r": 0.45,
+      "net_r": 0.57,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-09-30 13:45:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "SHORT",
+      "risk_r": 0.45,
+      "net_r": 0.61,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-09-30 14:00:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Stigma",
+      "direction": "SHORT",
+      "risk_r": 0.585,
+      "net_r": 0.66,
+      "action": "CONFLUENCE_BOOST"
+    },
+    {
+      "time": "2026-10-01 12:00:00+00:00",
+      "symbol": "NAS100",
+      "engine": "Stigma",
+      "direction": "LONG",
+      "risk_r": 0.45,
+      "net_r": -0.13,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-10-02 21:00:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Stigma",
+      "direction": "LONG",
+      "risk_r": 0.45,
+      "net_r": 0.07,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-10-02 21:00:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "LONG",
+      "risk_r": 0.585,
+      "net_r": 0.26,
+      "action": "CONFLUENCE_BOOST"
+    },
+    {
+      "time": "2026-10-06 15:30:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "SHORT",
+      "risk_r": 0.45,
+      "net_r": 0.56,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-10-08 13:15:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "LONG",
+      "risk_r": 0.45,
+      "net_r": -0.56,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-10-08 14:00:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "LONG",
+      "risk_r": 0.45,
+      "net_r": 0.13,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-10-12 14:00:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Stigma",
+      "direction": "LONG",
+      "risk_r": 0.45,
+      "net_r": -0.49,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-10-14 13:45:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "LONG",
+      "risk_r": 0.45,
+      "net_r": -0.54,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-10-15 14:15:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "LONG",
+      "risk_r": 0.45,
+      "net_r": 0.61,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-10-18 16:00:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Stigma",
+      "direction": "LONG",
+      "risk_r": 0.45,
+      "net_r": -0.51,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-10-18 19:45:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "LONG",
+      "risk_r": 0.45,
+      "net_r": 0.68,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-10-19 14:15:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "SHORT",
+      "risk_r": 0.45,
+      "net_r": 0.67,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-10-20 10:15:00+00:00",
+      "symbol": "USDJPY",
+      "engine": "Stigma",
+      "direction": "SHORT",
+      "risk_r": 0.45,
+      "net_r": -0.52,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-10-20 10:15:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "LONG",
+      "risk_r": 0.45,
+      "net_r": -0.45,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-10-20 12:15:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "LONG",
+      "risk_r": 0.45,
+      "net_r": 0.67,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-10-20 13:45:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "LONG",
+      "risk_r": 0.45,
+      "net_r": 0.68,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-10-20 14:15:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "SHORT",
+      "risk_r": 0.45,
+      "net_r": 0.68,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-10-20 15:00:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "SHORT",
+      "risk_r": 0.45,
+      "net_r": -0.45,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-10-20 21:30:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "SHORT",
+      "risk_r": 0.45,
+      "net_r": -0.45,
+      "action": "PROCEED"
+    },
+    {
+      "time": "2026-10-21 09:30:00+00:00",
+      "symbol": "BTCUSD",
+      "engine": "Trawma",
+      "direction": "SHORT",
+      "risk_r": 0.45,
+      "net_r": -0.45,
+      "action": "PROCEED"
+    }
+  ]
+}

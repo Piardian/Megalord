@@ -30,7 +30,9 @@ from megalord.arbiter.signal_arbiter import MegalordSignalArbiter
 from megalord.firewall.risk_firewall import MegalordRiskFirewall
 from megalord.firewall.news_guard import MegalordNewsGuard
 from megalord.live.mt5_executor import MegalordMT5Executor
+from megalord.live.position_policy import execution_plan, protection_steps, stop_at_r
 from megalord.adapters.stream_loader import ProjectStreamLoader, norm_symbol, norm_direction
+from megalord.research.decision_evidence import capture_entry_context, finish_entry_context, append_entry_evidence
 
 try:
     from dotenv import load_dotenv
@@ -91,7 +93,13 @@ class MegalordDaemon:
     ):
         self.config_path = Path(config_path)
         self.state_path = Path(state_path)
-        self.mode = mode.lower()
+        self.entry_evidence_path = self.state_path.with_name(self.state_path.stem + ".entry_evidence.jsonl")
+        from megalord.research.context_archive import ContextArchive
+        self.context_archive = ContextArchive(self.state_path.with_name(self.state_path.stem + ".context_evidence.jsonl"))
+        self.entry_evidence_counts = {"captured": 0, "errors": 0, "mismatches": 0, "compass_excluded": 0}
+        if str(mode).lower() == "mt5_live":
+            print("[GÜVENLİK KİLİDİ] The 5%ers canlı bağlantısı kesilmiştir! Mod zorunlu olarak 'shadow' yapıldı.")
+        self.mode = "shadow"
         self.config = self._load_config()
         self.arbiter = MegalordSignalArbiter(self.config)
         self.firewall = MegalordRiskFirewall(self.config)
@@ -104,6 +112,36 @@ class MegalordDaemon:
         )
         self.stream_loader = ProjectStreamLoader()
         self.state = self._load_state()
+
+    def _entry_context(self, candidate, decided_at, open_positions, macro_bias):
+        """Passive archive input. Archive failure must not change trading policy."""
+        if candidate.engine_name == "Convexity_v2":
+            self.entry_evidence_counts["compass_excluded"] += 1
+            return None
+        try:
+            return capture_entry_context(self.config, candidate, decided_at=decided_at,
+                active_positions=open_positions,
+                daily_realized_loss_r=float(self.state.get("daily_realized_loss_r", 0.0)),
+                loss_streaks=self.arbiter.engine_loss_streaks, macro_bias=macro_bias)
+        except Exception as exc:
+            self.entry_evidence_counts["errors"] += 1
+            print(f"[EntryEvidence] Input not archived for {candidate.signal_id}: {exc}")
+            return None
+
+    def _archive_entry_context(self, context, decision, *, news_check=None, news_available_at=None, firewall_result=None):
+        if context is None:
+            return
+        try:
+            record = finish_entry_context(context, decision=decision, news_check=news_check,
+                news_available_at=news_available_at, firewall_result=firewall_result)
+            append_entry_evidence(self.entry_evidence_path, record)
+            self.entry_evidence_counts["captured"] += 1
+            if not record["gate_parity_equal"]:
+                self.entry_evidence_counts["mismatches"] += 1
+                print(f"[EntryEvidence] Gate replay differs for {context['signal']['signal_id']}")
+        except Exception as exc:
+            self.entry_evidence_counts["errors"] += 1
+            print(f"[EntryEvidence] Result not archived for {context['signal']['signal_id']}: {exc}")
 
     def _load_config(self) -> Dict[str, Any]:
         if self.config_path.exists():
@@ -145,6 +183,7 @@ class MegalordDaemon:
                     data["current_date_utc"] = today
                     data["daily_realized_loss_r"] = 0.0
                     data["daily_realized_pnl_r"] = 0.0
+                data["mode"] = self.mode
                 return data
             except Exception as exc:
                 print(f"[Daemon] Warning: Could not read state from {self.state_path}: {exc}")
@@ -249,6 +288,10 @@ class MegalordDaemon:
                         gates[nsym] = "SHORT"
                     elif bias == "NEUTRAL_RANGE":
                         gates[nsym] = "NEUTRAL"
+                # Map broad US equity index trend to NAS100 if not explicitly defined
+                if "SPX" in gates and "NAS100" not in gates:
+                    gates["NAS100"] = gates["SPX"]
+                    gates["US100"] = gates["SPX"]
             except Exception as exc:
                 print(f"[Daemon] Warning reading macro gate: {exc}")
 
@@ -280,13 +323,12 @@ class MegalordDaemon:
         if entry_p <= 0:
             return 0.0
         r_dist = float(pos.get("risk_dist") or 0.0)
-        buffer_dist = r_dist * 0.05 if r_dist > 0 else 0.0
         direction = pos.get("direction", "LONG")
-        be_raw = (entry_p + buffer_dist) if direction == "LONG" else (entry_p - buffer_dist)
-        return round(be_raw, 5)
+        return stop_at_r(entry_p, max(r_dist, 0.0), direction, .05)
 
     def execute_cycle(self) -> Dict[str, Any]:
         """Runs a single orchestration cycle."""
+        self.entry_evidence_counts = {"captured": 0, "errors": 0, "mismatches": 0, "compass_excluded": 0}
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         if self.state.get("current_date_utc") != today:
             self.state["current_date_utc"] = today
@@ -297,10 +339,16 @@ class MegalordDaemon:
             self.reconcile_mt5_positions()
 
         macro_gates = self.fetch_htf_macro_gates()
+        try:
+            self.context_archive.observe(observed_at=datetime.now(timezone.utc), macro_gates=macro_gates,
+                news_config=self.news_guard.config, news_refreshed_at=self.news_guard._last_refresh_utc)
+        except Exception as exc:
+            print(f"[ContextArchive] observation could not be archived: {type(exc).__name__}")
         new_signals = self.poll_new_incoming_signals()
         open_positions = self.state.get("open_positions", [])
 
         cycle_results = {
+            "entry_evidence": self.entry_evidence_counts,
             "processed": len(new_signals),
             "approved": 0,
             "blocked": 0,
@@ -370,12 +418,14 @@ class MegalordDaemon:
                         candidate.metadata["basis_shift_applied"] = round(basis_shift, 5)
 
             # 1. Evaluate candidate through Arbiter (Confluence, Clone, MR vs Trend, Compass-only, Weekend Filter)
+            decision_at = datetime.now(timezone.utc)
             decision: ArbiterDecision = self.arbiter.evaluate_signal(
                 candidate=candidate,
                 active_positions=open_positions,
                 macro_htf_bias=macro_bias,
-                now_utc=datetime.now(timezone.utc),
+                now_utc=decision_at,
             )
+            entry_context = self._entry_context(candidate, decision_at, open_positions, macro_bias)
 
             # Do NOT permanently burn PENDING_LIMIT signals when waiting for price to pull back into entry box
             sig_status = str((candidate.metadata or {}).get("status", "")).upper()
@@ -388,6 +438,7 @@ class MegalordDaemon:
                 self.state.setdefault("processed_signal_ids", []).append(candidate.signal_id)
 
             if not decision.allowed:
+                self._archive_entry_context(entry_context, decision)
                 if decision.action == "HTF_CONFLICT_VETO":
                     self.state["performance_summary"]["vetoes_count"] += 1
                     cycle_results["vetoed"] += 1
@@ -404,7 +455,10 @@ class MegalordDaemon:
 
             # 2. Check The 5%ers High-Impact News Freeze (News Guard)
             news_check = self.news_guard.check_news_freeze(candidate.symbol)
+            news_available_at = datetime.now(timezone.utc)
             if news_check.get("is_frozen"):
+                self._archive_entry_context(entry_context, decision,
+                    news_check=news_check, news_available_at=news_available_at)
                 cycle_results["blocked"] += 1
                 cycle_results["actions"].append({
                     "signal_id": candidate.signal_id,
@@ -425,6 +479,8 @@ class MegalordDaemon:
                 daily_realized_loss_r=float(self.state.get("daily_realized_loss_r", 0.0)),
                 open_positions=open_positions,
             )
+            self._archive_entry_context(entry_context, decision, news_check=news_check,
+                news_available_at=news_available_at, firewall_result=(allowed_fw, fw_reason))
 
             if not allowed_fw:
                 self.state["performance_summary"]["firewall_blocks_count"] += 1
@@ -470,32 +526,10 @@ class MegalordDaemon:
                 market_ctx = self.mt5_executor.get_market_quality_context(candidate.symbol, candidate.direction)
                 live_p = market_ctx.get("current_price", candidate.entry_price) if market_ctx else candidate.entry_price
 
-                sl_val = candidate.sl_price or 0.0
-                if sl_val <= 0:
-                    sl_dist = 0.0020 if "JPY" not in candidate.symbol else 0.20
-                    sl_val = (live_p - sl_dist) if candidate.direction == "LONG" else (live_p + sl_dist)
-
-                risk_dist = abs(live_p - sl_val)
-                if risk_dist <= 0:
-                    risk_dist = 0.0020 if "JPY" not in candidate.symbol else 0.20
-
-                # TP1 Safeguard: Ensure TP1 is at least 0.80R from live entry, and cap Begonya00 TP1 at 1.0R
-                # so partial profit + Break-Even lock triggers reliably before mean-reversion snapback.
-                tp1_val = candidate.tp1_price
-                min_tp1_dist = risk_dist * 1.00
-                max_tp1_dist = risk_dist * 1.05 if candidate.engine_name == "Begonya00" else risk_dist * 2.0
-                live_tp1_dist = abs(tp1_val - live_p) if tp1_val > 0 else 0.0
-
-                if tp1_val <= 0 or live_tp1_dist < min_tp1_dist or live_tp1_dist > max_tp1_dist:
-                    tp1_val = round((live_p + risk_dist * 1.0) if candidate.direction == "LONG" else (live_p - risk_dist * 1.0), 5)
-
-                # TP2 Safeguard: Runner target must be at least 1.50R from live entry
-                tp2_val = candidate.tp2_price
-                min_tp2_dist = risk_dist * 1.50
-                live_tp2_dist = abs(tp2_val - live_p) if tp2_val > 0 else 0.0
-
-                if tp2_val <= 0 or live_tp2_dist < min_tp2_dist:
-                    tp2_val = round((live_p + risk_dist * 2.5) if candidate.direction == "LONG" else (live_p - risk_dist * 2.5), 5)
+                plan = execution_plan(candidate.engine_name, candidate.symbol, candidate.direction,
+                    live_p, candidate.sl_price, candidate.tp1_price, candidate.tp2_price)
+                sl_val, risk_dist, tp1_val, tp2_val = plan.stop, plan.risk_distance, plan.tp1, plan.tp2
+                one_r_cash_at_entry = self.mt5_executor.get_one_r_cash_verified()
 
                 # İkiz Emir (Twin Orders) Mimarisi: %50 TP1 Kâr Kilidi, %50 TP2 Runner
                 live_res = self.mt5_executor.place_twin_market_orders(
@@ -540,15 +574,16 @@ class MegalordDaemon:
                 "confluent_engines": decision.confluent_engines,
                 "status": "OPEN",
                 "raw_r_result": candidate.raw_r_result,
+                "one_r_cash_at_entry": one_r_cash_at_entry if self.mode == "mt5_live" else None,
                 "ticket": live_ticket,
                 "leg1_ticket": live_res.get("leg1_ticket") if live_res else None,
                 "leg1_vol": live_res.get("leg1_vol", 0.0) if live_res else 0.0,
-                "leg1_tp": tp1_val if self.mode == "mt5_live" else candidate.tp1_price,
+                "leg1_tp": live_res.get("leg1_tp", tp1_val) if self.mode == "mt5_live" else candidate.tp1_price,
                 "leg1_open": bool(live_res.get("leg1_ticket")) if live_res else True,
                 "leg1_profit": 0.0,
                 "leg2_ticket": live_res.get("leg2_ticket") if live_res else None,
                 "leg2_vol": live_res.get("leg2_vol", 0.0) if live_res else 0.0,
-                "leg2_tp": tp2_val if self.mode == "mt5_live" else candidate.tp2_price,
+                "leg2_tp": live_res.get("leg2_tp", tp2_val) if self.mode == "mt5_live" else candidate.tp2_price,
                 "leg2_open": bool(live_res.get("leg2_ticket")) if live_res else False,
                 "entry_price": (float(live_res.get("entry_price") or 0.0) if (live_res and float(live_res.get("entry_price") or 0.0) > 0) else float(candidate.entry_price)),
                 "sl_price": sl_val if self.mode == "mt5_live" else candidate.sl_price,
@@ -582,10 +617,42 @@ class MegalordDaemon:
             one_r_cash = 49.30
 
         active_open_positions = []
+        now_utc = datetime.now(timezone.utc)
+        stream_id_map = {s.signal_id: s for s in self.stream_loader.load_all_signals()}
         for pos in open_positions:
             is_closed = False
             close_reason = ""
             net_pnl_r = 0.0
+
+            # EOD Index Session Close Rule (Protect against overnight gap and illiquid spread slippage)
+            sym_u = str(pos.get("symbol", "")).upper()
+            is_index_sym = any(idx_name in sym_u for idx_name in ("NAS100", "US100", "SPX", "SP500", "GER40"))
+            # 20:45 UTC to 01:00 UTC overnight protection window
+            in_eod_window = (now_utc.hour == 20 and now_utc.minute >= 45) or (now_utc.hour >= 21) or (now_utc.hour < 1)
+            if is_index_sym and in_eod_window:
+                all_closed_ok = True
+                fail_details = []
+                if self.mode == "mt5_live":
+                    t1 = pos.get("leg1_ticket") or pos.get("ticket")
+                    t2 = pos.get("leg2_ticket")
+                    if t1:
+                        ok1, det1 = self.mt5_executor.close_position(t1, "EOD_INDEX_SESSION_CLOSE")
+                        if not ok1:
+                            all_closed_ok = False
+                            fail_details.append(f"Leg1 #{t1}: {det1}")
+                    if t2:
+                        ok2, det2 = self.mt5_executor.close_position(t2, "EOD_INDEX_SESSION_CLOSE")
+                        if not ok2:
+                            all_closed_ok = False
+                            fail_details.append(f"Leg2 #{t2}: {det2}")
+                if all_closed_ok:
+                    is_closed = True
+                    close_reason = "EOD_INDEX_SESSION_CLOSE"
+                    print(f"[EOD Guard] 🕒 {sym_u} seans sonu (20:45+ UTC) başarıyla kapatıldı (Gece kayma koruması aktif).")
+                else:
+                    is_closed = False
+                    err_msg = "; ".join(fail_details)
+                    print(f"[EOD Guard Alert] ⚠️ {sym_u} EOD kapatma BAŞARISIZ: {err_msg}! Gelecek döngüde tekrar denenecek.")
 
             # 1. CANLI MT5 HESAP TAKİBİ (Break-Even & İz Süren Stop & Çift Bacak Kapanış)
             if self.mode == "mt5_live" and (pos.get("leg1_ticket") or pos.get("ticket")):
@@ -614,8 +681,14 @@ class MegalordDaemon:
                     l1_pos = self.mt5_executor.get_open_position(l1_tick)
                     if l1_pos is None:
                         # Bacak 1 MT5'te kapandı!
-                        pos["leg1_open"] = False
                         deal1 = self.mt5_executor.get_position_close_deal(l1_tick)
+                        if deal1 is None:
+                            pos["close_deal_pending"] = l1_tick
+                            active_open_positions.append(pos)
+                            continue
+                        pos["leg1_open"] = False
+                        pos.pop("close_deal_pending", None)
+                        pos["leg1_close_evidence"] = deal1
                         profit1 = float(deal1.get("profit", 0.0)) if deal1 else 0.0
                         pos["leg1_profit"] = profit1
                         d_comm1 = deal1.get("comment", "") if deal1 else ""
@@ -624,11 +697,13 @@ class MegalordDaemon:
                         if not l2_tick:
                             # Tek bacaklı emir (Single Order) doğrudan kapandı!
                             is_closed = True
-                            net_pnl_r = round(profit1 / one_r_cash, 2)
-                            if profit1 > 0 or "[tp" in d_comm1.lower():
+                            reference_r = float(pos.get("one_r_cash_at_entry") or one_r_cash)
+                            pos["r_reference_verified"] = bool(pos.get("one_r_cash_at_entry"))
+                            net_pnl_r = round(profit1 / reference_r, 2)
+                            if "[tp" in d_comm1.lower() or (deal1.get("reason") is not None and deal1["reason"] == mt5.DEAL_REASON_TP):
                                 close_reason = "TP1_HIT"
                                 badge = "🏆 <b>TEK EMİR HEDEFLE KAPANDI (TP)</b>"
-                            elif profit1 < 0 or "[sl" in d_comm1.lower():
+                            elif "[sl" in d_comm1.lower() or (deal1.get("reason") is not None and deal1["reason"] == mt5.DEAL_REASON_SL):
                                 close_reason = "STOP_LOSS"
                                 badge = "🔴 <b>STOP LOSS TETİKLENDİ</b>"
                             else:
@@ -683,9 +758,11 @@ class MegalordDaemon:
                         cur_p = tick_live.bid if pos["direction"] == "LONG" else tick_live.ask
                         fav_dist = (cur_p - pos["entry_price"]) if pos["direction"] == "LONG" else (pos["entry_price"] - cur_p)
                         r_dist = float(pos["risk_dist"])
+                        protection = protection_steps(pos["entry_price"], r_dist, pos["direction"], cur_p,
+                            be_moved=bool(pos.get("be_moved")), trailing_level=float(pos.get("trailing_level", 0.0)))
 
                         # Aşama 1: Fiyat +0.80R'a ulaştıysa tüm açık bacakları Break-Even (+0.05R) seviyesine koru
-                        if fav_dist >= (r_dist * 0.80) and not pos.get("be_moved"):
+                        if "EARLY_BE" in protection:
                             be_p = self._compute_be_price(pos)
                             if be_p > 0:
                                 ok1 = (
@@ -698,14 +775,14 @@ class MegalordDaemon:
                                     if (l2_live and self._is_sl_tightening(pos["direction"], float(l2_live.sl or 0.0), be_p))
                                     else True
                                 )
-                                if ok1 or ok2:
+                                if ok1 and ok2:
                                     pos["be_moved"] = True
                                     pos["be_pending"] = False
                                     print(f"[Lifecycle] 🛡️ +0.80R Erken Koruma Aktif: {pos['symbol']} Stop -> {be_p}")
 
                         # Aşama 2: Fiyat +1.50R'a ulaştıysa Stopu +0.75R'a taşı
-                        if fav_dist >= (r_dist * 1.50) and pos.get("trailing_level", 0.0) < 0.75:
-                            trail_sl = round(pos["entry_price"] + (r_dist * 0.75), 5) if pos["direction"] == "LONG" else round(pos["entry_price"] - (r_dist * 0.75), 5)
+                        if "TRAIL_075" in protection:
+                            trail_sl = protection["TRAIL_075"]
                             if trail_sl > 0 and l2_live and self._is_sl_tightening(pos["direction"], float(l2_live.sl or 0.0), trail_sl):
                                 mod_trail = self.mt5_executor.modify_position_sl(l2_tick, pos["symbol"], trail_sl, pos.get("leg2_tp", 0.0))
                                 if mod_trail:
@@ -717,8 +794,8 @@ class MegalordDaemon:
                                     )
 
                         # Aşama 3: Fiyat +2.20R'a ulaştıysa Stopu +1.40R'a taşı
-                        if fav_dist >= (r_dist * 2.20) and pos.get("trailing_level", 0.0) < 1.40:
-                            trail_sl2 = round(pos["entry_price"] + (r_dist * 1.40), 5) if pos["direction"] == "LONG" else round(pos["entry_price"] - (r_dist * 1.40), 5)
+                        if "TRAIL_140" in protection:
+                            trail_sl2 = protection["TRAIL_140"]
                             if trail_sl2 > 0 and l2_live and self._is_sl_tightening(pos["direction"], float(l2_live.sl or 0.0), trail_sl2):
                                 mod_trail2 = self.mt5_executor.modify_position_sl(l2_tick, pos["symbol"], trail_sl2, pos.get("leg2_tp", 0.0))
                                 if mod_trail2:
@@ -732,27 +809,36 @@ class MegalordDaemon:
                 if l2_tick and pos.get("leg2_open", True):
                     l2_pos = self.mt5_executor.get_open_position(l2_tick)
                     if l2_pos is None:
-                        pos["leg2_open"] = False
                         deal2 = self.mt5_executor.get_position_close_deal(l2_tick)
+                        if deal2 is None:
+                            pos["close_deal_pending"] = l2_tick
+                            active_open_positions.append(pos)
+                            continue
+                        pos["leg2_open"] = False
+                        pos.pop("close_deal_pending", None)
+                        pos["leg2_close_evidence"] = deal2
                         profit2 = float(deal2.get("profit", 0.0)) if deal2 else 0.0
+                        pos["leg2_profit"] = profit2
                         d_comm2 = deal2.get("comment", "") if deal2 else ""
                         total_profit = float(pos.get("leg1_profit", 0.0)) + profit2
 
-                        if "[tp" in d_comm2.lower() or profit2 > 0:
+                        if "[tp" in d_comm2.lower() or (deal2.get("reason") is not None and deal2["reason"] == mt5.DEAL_REASON_TP):
                             close_reason = "TP2_HIT"
                             badge = "🏆 <b>TP2 ANA HEDEF VURULDU (FULL WIN)!</b>"
-                        elif pos.get("be_moved") and abs(profit2) < 5.0:
-                            close_reason = "BREAK_EVEN"
-                            badge = "🛡️ <b>KALAN PARÇA BAŞABAŞTA (BE) KAPANDI</b>"
                         elif pos.get("trailing_level", 0.0) > 0:
                             close_reason = "TRAILING_STOP"
                             badge = "⚡ <b>İZ SÜREN STOP İLE KÂRDA KAPANDI</b>"
+                        elif pos.get("be_moved"):
+                            close_reason = "BREAK_EVEN" if profit2 >= 0 else "PROTECTED_STOP_LOSS"
+                            badge = "🛡️ <b>KALAN PARÇA KORUMA STOPUNDA KAPANDI</b>"
                         else:
                             close_reason = "STOP_LOSS"
                             badge = "🔴 <b>STOP LOSS TETİKLENDİ</b>"
 
                         is_closed = True
-                        net_pnl_r = round(total_profit / one_r_cash, 2)
+                        reference_r = float(pos.get("one_r_cash_at_entry") or one_r_cash)
+                        pos["r_reference_verified"] = bool(pos.get("one_r_cash_at_entry"))
+                        net_pnl_r = round(total_profit / reference_r, 2)
                         self.notifier.send_alert(
                             f"{badge}\n"
                             f"━━━━━━━━━━━━━━━━━━━━\n"
@@ -766,37 +852,55 @@ class MegalordDaemon:
                 leg1_closed = not pos.get("leg1_open", True)
                 leg2_closed = (not pos.get("leg2_open", True)) if has_leg2 else True
 
-                if leg1_closed and leg2_closed:
-                    is_closed = True
+                is_closed = leg1_closed and leg2_closed
+                if is_closed:
+                    reference_r = float(pos.get("one_r_cash_at_entry") or one_r_cash)
+                    pos["r_reference_verified"] = bool(pos.get("one_r_cash_at_entry"))
+                    net_pnl_r = round((float(pos.get("leg1_profit", 0.0)) + float(pos.get("leg2_profit", 0.0))) / reference_r, 2)
                     if not close_reason:
                         close_reason = "POSITION_CLOSED"
 
             else:
-                # 2. SİMÜLASYON / BACKTEST MODU
-                exit_time_str = pos.get("exit_time")
-                if pos.get("status") in ("CLOSED", "TP1_HIT", "TP2_HIT", "STOP_LOSS", "BREAK_EVEN"):
+                # 2. SİMÜLASYON / GÖLGE (SHADOW) MODU
+                sig_obj = stream_id_map.get(pos.get("signal_id"))
+                if sig_obj and sig_obj.metadata.get("status") == "CLOSED":
+                    is_closed = True
+                    raw_r = float(sig_obj.raw_r_result or 0.0)
+                    alloc_r = float(pos.get("allocated_risk_r", 1.0))
+                    comm_fee_r = 0.05 * alloc_r
+                    net_pnl_r = round((raw_r * alloc_r) - comm_fee_r, 2)
+                    if raw_r >= 1.5:
+                        close_reason = "TP2_HIT"
+                    elif raw_r >= 0.5:
+                        close_reason = "TP1_HIT"
+                    elif -0.15 <= raw_r <= 0.15:
+                        close_reason = "BREAK_EVEN"
+                    else:
+                        close_reason = "STOP_LOSS"
+                elif pos.get("status") in ("CLOSED", "TP1_HIT", "TP2_HIT", "STOP_LOSS", "BREAK_EVEN"):
                     is_closed = True
                     close_reason = pos.get("close_reason") or pos.get("status")
-                elif exit_time_str:
-                    try:
-                        exit_dt = pd.to_datetime(exit_time_str, utc=True)
-                        if exit_dt <= datetime.now(timezone.utc):
-                            is_closed = True
-                            raw_r = float(pos.get("raw_r_result", 0.0))
-                            alloc_r = float(pos.get("allocated_risk_r", 1.0))
-                            comm_fee_r = 0.05 * alloc_r
-                            net_pnl_r = round((raw_r * alloc_r) - comm_fee_r, 2)
-                            if raw_r >= 1.5:
-                                close_reason = "TP2_HIT"
-                            elif raw_r >= 0.8:
-                                close_reason = "TP1_HIT"
-                            elif -0.15 <= raw_r <= 0.15:
-                                close_reason = "BREAK_EVEN"
-                            else:
-                                close_reason = "STOP_LOSS"
-                    except Exception:
-                        pass
-
+                else:
+                    exit_time_str = pos.get("exit_time") or (str(sig_obj.exit_time) if (sig_obj and sig_obj.exit_time) else None)
+                    if exit_time_str:
+                        try:
+                            exit_dt = pd.to_datetime(exit_time_str, utc=True)
+                            if exit_dt <= datetime.now(timezone.utc):
+                                is_closed = True
+                                raw_r = float(sig_obj.raw_r_result) if (sig_obj and sig_obj.raw_r_result) else float(pos.get("raw_r_result", 0.0))
+                                alloc_r = float(pos.get("allocated_risk_r", 1.0))
+                                comm_fee_r = 0.05 * alloc_r
+                                net_pnl_r = round((raw_r * alloc_r) - comm_fee_r, 2)
+                                if raw_r >= 1.5:
+                                    close_reason = "TP2_HIT"
+                                elif raw_r >= 0.5:
+                                    close_reason = "TP1_HIT"
+                                elif -0.15 <= raw_r <= 0.15:
+                                    close_reason = "BREAK_EVEN"
+                                else:
+                                    close_reason = "STOP_LOSS"
+                        except Exception:
+                            pass
             if is_closed:
                 # Update Arbiter loss-streak tracker
                 self.arbiter.record_trade_outcome(pos.get("engine_name", "Unknown"), net_pnl_r)
@@ -917,6 +1021,46 @@ class MegalordDaemon:
         )
         self.notifier.send_alert(msg)
 
+    def dispatch_periodic_scoreboard(self, force: bool = False) -> None:
+        """Sends daily/periodic scoreboard status summary to Telegram."""
+        now_utc = datetime.now(timezone.utc)
+        last_report_str = self.state.get("last_telegram_scoreboard_at")
+        if not force and last_report_str:
+            try:
+                last_dt = pd.to_datetime(last_report_str, utc=True)
+                if (now_utc - last_dt).total_seconds() < 86400:  # 24 saatte bir periyodik rapor
+                    return
+            except Exception:
+                pass
+
+        perf = self.state.get("performance_summary", {})
+        total = perf.get("total_trades", 0)
+        wins = perf.get("wins", 0)
+        losses = perf.get("losses", 0)
+        wr = round((wins / total * 100), 1) if total > 0 else 0.0
+        net_total_r = perf.get("net_r", 0.0)
+        open_pos = self.state.get("open_positions", [])
+
+        msg = (
+            "📊 <b>MEGALORD 30 GUNLUK GOLGE TESTI — DURUM RAPORU</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            f"⏱ <b>Test Baslangici:</b> <code>{self.state.get('test_started_at', '2026-10-24')}</code>\n"
+            f"📅 <b>Hedef Bitis:</b> <code>{self.state.get('test_ends_at', '2026-11-24')}</code>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "📈 <b>SKOR TABLOSU:</b>\n"
+            f"• Toplam Islem: <b>{total}</b>\n"
+            f"• Kazanc / Kayip: <b>{wins}W / {losses}L</b> (%{wr} Kazanma Orani)\n"
+            f"• <b>Net Kasa Getirisi:</b> <b>{net_total_r:+.2f} R</b>\n"
+            f"• Acik Pozisyon Sayisi: <b>{len(open_pos)}</b>\n"
+            f"• Guvenlik Blokajlari: <b>{perf.get('firewall_blocks_count', 0)}</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "ℹ️ <i>Mod: SHADOW PAPER (Gercek MT5 hesabi bagli degildir).</i>\n"
+            f"🕒 <code>{now_utc.strftime('%Y-%m-%d %H:%M:%S UTC')}</code>"
+        )
+        if self.notifier.send_alert(msg):
+            self.state["last_telegram_scoreboard_at"] = now_utc.isoformat()
+            self.save_state()
+
     def print_dashboard(self) -> None:
         """Prints high-visibility executive command center status."""
         perf = self.state.get("performance_summary", {})
@@ -983,6 +1127,7 @@ def main():
     try:
         while True:
             res = daemon.execute_cycle()
+            daemon.dispatch_periodic_scoreboard()
             if res["processed"] > 0:
                 print(f"[{datetime.now(timezone.utc).strftime('%H:%M:%S')}] Döngü: +{res['approved']} Onay | -{res['blocked']} Blokaj")
                 daemon.print_dashboard()
